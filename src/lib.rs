@@ -1,3 +1,4 @@
+pub mod cmd;
 pub mod config;
 mod context;
 pub mod run;
