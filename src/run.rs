@@ -3,12 +3,22 @@ use clap::{command, Parser, Subcommand};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct EntryPoint {
-    /// Name of the person to greet
+    /// Private key to use for signing transactions
+    #[arg(short, long)]
+    priv_key: Option<String>,
+
+    /// Rpc url to send requests to
+    #[arg(short, long)]
+    rpc_url: Option<String>,
+
+    /// Optional configuration file
+    #[arg(short, long)]
+    config_file: Option<String>,
+
     #[command(subcommand)]
     command: Command,
 }
 
-/// Doc comment
 #[derive(Subcommand, Debug)]
 #[command()]
 enum Command {
