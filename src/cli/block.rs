@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use crate::{cmd, context::CommandExecutionContext};
-use clap::{Args, Subcommand};
+use clap::{command, Args, Parser, Subcommand};
 use ethers::types::{BlockId, BlockNumber};
 
 #[derive(Args, Debug)]
@@ -25,15 +25,9 @@ pub enum BlockCommand {
     Receipts(GetBlockTransactionCountArgs),
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Parser, Debug)]
 #[command()]
-pub enum BlockTransactionSubCommand {
-    /// Gets the number of transactions for the block
-    Count(GetBlockTransactionCountArgs),
-}
-
-#[derive(Args, Debug)]
-pub struct GetBlockArgs {
+pub struct BlockSubCommand {
     #[arg(long)]
     hash: Option<String>,
 
@@ -43,6 +37,19 @@ pub struct GetBlockArgs {
     #[arg(long)]
     tag: Option<String>,
 
+    #[command(subcommand)]
+    command: BlockCommand,
+}
+
+#[derive(Subcommand, Debug)]
+#[command()]
+pub enum BlockTransactionSubCommand {
+    /// Gets the number of transactions for the block
+    Count(GetBlockTransactionCountArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct GetBlockArgs {
     #[arg(long)]
     include_tx: Option<bool>,
 }
@@ -57,38 +64,6 @@ pub struct GetBlockTransactionCountArgs {
 
     #[arg(long)]
     tag: Option<String>,
-}
-
-impl TryFrom<GetBlockArgs> for BlockId {
-    type Error = String;
-
-    fn try_from(value: GetBlockArgs) -> Result<Self, Self::Error> {
-        if value.hash.is_some() {
-            return Ok(BlockId::Hash(
-                value
-                    .hash
-                    .unwrap()
-                    .parse()
-                    .map_err(|_| "Invalid block hash format")?,
-            ));
-        }
-
-        if value.number.is_some() {
-            return Ok(BlockId::Number(BlockNumber::Number(
-                value.number.unwrap().into(),
-            )));
-        }
-
-        if value.tag.is_some() {
-            // TODO enforce tag to be a block tag and not a number even if the underlying type supports that
-            return Ok(BlockId::Number(
-                BlockNumber::from_str(&value.tag.unwrap())
-                    .map_err(|_| "Failed to parse block tag")?,
-            ));
-        }
-
-        Err(String::from("Failed to parse blcok identifier"))
-    }
 }
 
 impl TryFrom<GetBlockTransactionCountArgs> for BlockId {
@@ -125,34 +100,55 @@ impl TryFrom<GetBlockTransactionCountArgs> for BlockId {
 
 pub fn parse(
     context: &CommandExecutionContext,
-    command: BlockCommand,
+    sub_command: BlockSubCommand,
 ) -> Result<(), anyhow::Error> {
+    println!("{:#?}", sub_command);
+
+    let BlockSubCommand {
+        hash,
+        number,
+        tag,
+        command,
+    } = sub_command;
+
+    let get_block = GetBlockTransactionCountArgs { hash, number, tag };
+
     match command {
         BlockCommand::Get(get_block_args) => {
-            let _ = context.execute(cmd::block::get_block(context, get_block_args));
+            let include_tx = get_block_args.include_tx.unwrap_or_default();
+
+            let _ = context.execute(cmd::block::get_block(
+                context,
+                get_block.try_into().unwrap(),
+                include_tx,
+            ));
         }
-        BlockCommand::Number(_) => {
-            let _ = context.execute(cmd::block::get_block_number(context));
-        }
-        BlockCommand::Transaction(transaction_command) => match transaction_command {
-            BlockTransactionSubCommand::Count(get_block_transaction_count) => {
-                let _ = context.execute(cmd::block::get_transaction_count(
-                    context,
-                    get_block_transaction_count,
-                ));
-            }
-        },
-        BlockCommand::Uncle(uncle_command) => match uncle_command {
-            BlockTransactionSubCommand::Count(get_block_transaction_count) => {
-                let _ = context.execute(cmd::block::get_uncle_block_count(
-                    context,
-                    get_block_transaction_count,
-                ));
-            }
-        },
-        BlockCommand::Receipts(receipt_command) => {
-            let _ = context.execute(cmd::block::get_block_receipts(context, receipt_command));
-        }
+        BlockCommand::Number(_) => todo!(),
+        // {
+        //     let _ = context.execute(cmd::block::get_block_number(context));
+        // }
+        BlockCommand::Transaction(_transaction_command) => todo!(),
+        // match transaction_command {
+        //     BlockTransactionSubCommand::Count(get_block_transaction_count) => {
+        //         let _ = context.execute(cmd::block::get_transaction_count(
+        //             context,
+        //             get_block_transaction_count,
+        //         ));
+        //     }
+        // },
+        BlockCommand::Uncle(_uncle_command) => todo!(),
+        // match uncle_command {
+        //     BlockTransactionSubCommand::Count(get_block_transaction_count) => {
+        //         let _ = context.execute(cmd::block::get_uncle_block_count(
+        //             context,
+        //             get_block_transaction_count,
+        //         ));
+        //     }
+        // },
+        BlockCommand::Receipts(_receipt_command) => todo!(),
+        // {
+        // let _ = context.execute(cmd::block::get_block_receipts(context, receipt_command));
+        // }
     }
 
     Ok(())

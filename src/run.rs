@@ -1,7 +1,7 @@
 use clap::{command, Parser, Subcommand};
 
 use crate::{
-    cli::block::{self, BlockCommand},
+    cli::block::{self, BlockSubCommand},
     config::{get_config, ConfigOverrides},
     context::CommandExecutionContext,
 };
@@ -29,8 +29,8 @@ struct EntryPoint {
 #[command()]
 enum Command {
     /// Execute block related operations
-    #[command(subcommand)]
-    Block(BlockCommand),
+    #[command()]
+    Block(BlockSubCommand),
 
     /// Execute account related operations
     #[command(subcommand)]
