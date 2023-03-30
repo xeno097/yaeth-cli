@@ -1,7 +1,7 @@
 use clap::{command, Parser, Subcommand};
 
 use crate::{
-    cmd::block::{self, BlockCommand},
+    cli::block::{self, BlockCommand},
     config::{get_config, ConfigOverrides},
     context::CommandExecutionContext,
 };
