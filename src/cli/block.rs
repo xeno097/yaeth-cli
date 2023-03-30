@@ -22,20 +22,20 @@ pub enum BlockCommand {
     #[command(subcommand)]
     Uncle(BlockTransactionSubCommand),
 
-    Receipts(GetBlockTransactionCountArgs),
+    Receipts(NoArgs),
 }
 
 #[derive(Parser, Debug)]
 #[command()]
 pub struct BlockSubCommand {
-    #[arg(long)]
+    #[arg(long, exclusive = true)]
     hash: Option<String>,
 
-    #[arg(long)]
+    #[arg(long, exclusive = true)]
     number: Option<u64>,
 
-    #[arg(long)]
-    tag: Option<String>,
+    #[arg(long, exclusive = true)]
+    tag: Option<BlockTag>,
 
     #[command(subcommand)]
     command: BlockCommand,
@@ -45,7 +45,7 @@ pub struct BlockSubCommand {
 #[command()]
 pub enum BlockTransactionSubCommand {
     /// Gets the number of transactions for the block
-    Count(GetBlockTransactionCountArgs),
+    Count(NoArgs),
 }
 
 #[derive(Args, Debug)]
@@ -54,47 +54,98 @@ pub struct GetBlockArgs {
     include_tx: Option<bool>,
 }
 
-#[derive(Args, Debug)]
-pub struct GetBlockTransactionCountArgs {
-    #[arg(long)]
-    hash: Option<String>,
-
-    #[arg(long)]
-    number: Option<u64>,
-
-    #[arg(long)]
-    tag: Option<String>,
+enum GetBlockById {
+    Hash(String),
+    Tag(BlockTag),
+    Number(u64),
+    None,
 }
 
-impl TryFrom<GetBlockTransactionCountArgs> for BlockId {
-    type Error = String;
-
-    fn try_from(value: GetBlockTransactionCountArgs) -> Result<Self, Self::Error> {
-        if value.hash.is_some() {
-            return Ok(BlockId::Hash(
-                value
-                    .hash
-                    .unwrap()
-                    .parse()
-                    .map_err(|_| "Invalid block hash format")?,
-            ));
+impl GetBlockById {
+    pub fn new(
+        hash: Option<String>,
+        number: Option<u64>,
+        tag: Option<BlockTag>,
+    ) -> Result<Self, anyhow::Error> {
+        // Sanity check even if it shouldn't be possible because the check is performed by the cli
+        if hash.is_some() && number.is_some()
+            || hash.is_some() && tag.is_some()
+            || number.is_some() && tag.is_some()
+        {
+            return Err(anyhow::anyhow!("Provided more than one block identifier"));
         }
 
-        if value.number.is_some() {
-            return Ok(BlockId::Number(BlockNumber::Number(
-                value.number.unwrap().into(),
-            )));
+        if let Some(hash) = hash {
+            return Ok(Self::Hash(hash));
         }
 
-        if value.tag.is_some() {
-            // TODO enforce tag to be a block tag and not a number even if the underlying type supports that
-            return Ok(BlockId::Number(
-                BlockNumber::from_str(&value.tag.unwrap())
-                    .map_err(|_| "Failed to parse block tag")?,
-            ));
+        if let Some(block_number) = number {
+            return Ok(Self::Number(block_number));
         }
 
-        Err(String::from("Failed to parse blcok identifier"))
+        if let Some(tag) = tag {
+            return Ok(Self::Tag(tag));
+        }
+
+        Ok(Self::None)
+    }
+}
+
+#[derive(Debug, Clone)]
+enum BlockTag {
+    Latest,
+    Finalized,
+    Safe,
+    Earliest,
+    Pending,
+}
+
+// Used by clap's value_parser
+impl FromStr for BlockTag {
+    type Err = String;
+
+    fn from_str(maybe_tag: &str) -> Result<Self, Self::Err> {
+        match maybe_tag.to_lowercase().trim() {
+            "latest" => Ok(BlockTag::Latest),
+            "finalized" => Ok(BlockTag::Finalized),
+            "safe" => Ok(BlockTag::Safe),
+            "earliest" => Ok(BlockTag::Earliest),
+            "pending" => Ok(BlockTag::Pending),
+            _ => Err(format!("Received invalid block tag: {maybe_tag}")),
+        }
+    }
+}
+
+impl From<BlockTag> for BlockId {
+    fn from(value: BlockTag) -> Self {
+        let tag = match value {
+            BlockTag::Latest => BlockNumber::Latest,
+            BlockTag::Finalized => BlockNumber::Finalized,
+            BlockTag::Safe => BlockNumber::Safe,
+            BlockTag::Earliest => BlockNumber::Earliest,
+            BlockTag::Pending => BlockNumber::Pending,
+        };
+
+        BlockId::Number(tag)
+    }
+}
+
+impl TryFrom<GetBlockById> for BlockId {
+    type Error = anyhow::Error;
+
+    fn try_from(value: GetBlockById) -> Result<Self, Self::Error> {
+        match value {
+            GetBlockById::Hash(hash) => {
+                Ok(BlockId::Hash(hash.parse().map_err(|_| {
+                    anyhow::anyhow!("Invalid block hash format")
+                })?))
+            }
+            GetBlockById::Tag(tag) => Ok(tag.into()),
+            GetBlockById::Number(block_number) => {
+                Ok(BlockId::Number(BlockNumber::Number(block_number.into())))
+            }
+            _ => Err(anyhow::anyhow!("Failed to parse block identifier")),
+        }
     }
 }
 
@@ -102,8 +153,6 @@ pub fn parse(
     context: &CommandExecutionContext,
     sub_command: BlockSubCommand,
 ) -> Result<(), anyhow::Error> {
-    println!("{:#?}", sub_command);
-
     let BlockSubCommand {
         hash,
         number,
@@ -111,7 +160,7 @@ pub fn parse(
         command,
     } = sub_command;
 
-    let get_block = GetBlockTransactionCountArgs { hash, number, tag };
+    let get_block_by_id = GetBlockById::new(hash, number, tag)?;
 
     match command {
         BlockCommand::Get(get_block_args) => {
@@ -119,7 +168,7 @@ pub fn parse(
 
             let _ = context.execute(cmd::block::get_block(
                 context,
-                get_block.try_into().unwrap(),
+                get_block_by_id.try_into()?,
                 include_tx,
             ));
         }
