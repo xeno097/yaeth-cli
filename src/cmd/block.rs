@@ -24,6 +24,8 @@ pub enum BlockCommand {
 
     #[command(subcommand)]
     Uncle(BlockTransactionSubCommand),
+
+    Receipts(GetBlockTransactionCountArgs),
 }
 
 #[derive(Subcommand, Debug)]
@@ -147,6 +149,9 @@ pub fn parse(
                     context.execute(get_uncle_block_count(context, get_block_transaction_count));
             }
         },
+        BlockCommand::Receipts(receipt_command) => {
+            let _ = context.execute(get_block_receipts(context, receipt_command));
+        }
     }
 
     Ok(())
@@ -205,5 +210,25 @@ async fn get_block_number(context: &CommandExecutionContext) -> Result<(), anyho
     Ok(())
 }
 
-// TODO: implement protype function for this method
 // eth_getBlockReceipts
+async fn get_block_receipts(
+    context: &CommandExecutionContext,
+    get_block_args: GetBlockTransactionCountArgs,
+) -> Result<(), anyhow::Error> {
+    let block_id: BlockId = get_block_args.try_into().unwrap();
+
+    let block_id: BlockNumber = match block_id {
+        BlockId::Hash(hash) => {
+            let block = context.node_provider().get_block(hash).await?;
+
+            BlockNumber::from(block.unwrap().number.unwrap())
+        }
+        BlockId::Number(num) => num,
+    };
+
+    let block_number = context.node_provider().get_block_receipts(block_id).await?;
+
+    println!("{:#?}", block_number);
+
+    Ok(())
+}
