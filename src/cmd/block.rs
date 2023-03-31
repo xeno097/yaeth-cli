@@ -19,19 +19,33 @@ pub async fn get_block(
     include_tx: bool,
 ) -> Result<GetBlockResult, anyhow::Error> {
     if include_tx {
-        let block = context.node_provider().get_block_with_txs(block_id).await?;
-
-        if let Some(block) = block {
-            return Ok(GetBlockResult::BlockWithTransaction(block));
-        }
-
-        return Ok(GetBlockResult::NotFound());
+        get_raw_block(context, block_id).await
+    } else {
+        get_block_with_txs(context, block_id).await
     }
+}
 
+async fn get_raw_block(
+    context: &CommandExecutionContext,
+    block_id: BlockId,
+) -> Result<GetBlockResult, anyhow::Error> {
     let block = context.node_provider().get_block(block_id).await?;
 
     if let Some(block) = block {
         return Ok(GetBlockResult::Block(block));
+    }
+
+    Ok(GetBlockResult::NotFound())
+}
+
+async fn get_block_with_txs(
+    context: &CommandExecutionContext,
+    block_id: BlockId,
+) -> Result<GetBlockResult, anyhow::Error> {
+    let block = context.node_provider().get_block_with_txs(block_id).await?;
+
+    if let Some(block) = block {
+        return Ok(GetBlockResult::BlockWithTransaction(block));
     }
 
     Ok(GetBlockResult::NotFound())

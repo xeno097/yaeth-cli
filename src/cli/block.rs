@@ -10,7 +10,7 @@ pub struct NoArgs;
 #[derive(Subcommand, Debug)]
 #[command()]
 pub enum BlockCommand {
-    /// Gets a block by identifier  
+    /// Gets a block using the provided identifier  
     Get(GetBlockArgs),
 
     /// Gets the number of the most recent block
