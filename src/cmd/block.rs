@@ -1,20 +1,40 @@
 use crate::context::CommandExecutionContext;
+use anyhow::Ok;
 use ethers::{
     providers::Middleware,
-    types::{BlockId, BlockNumber},
+    types::{Block, BlockId, BlockNumber, Transaction, H256},
 };
+
+#[derive(Debug)]
+pub enum GetBlockResult {
+    Block(Block<H256>),
+    BlockWithTransaction(Block<Transaction>),
+    NotFound(),
+}
 
 // eth_getBlockByHash || eth_getBlockByNumber
 pub async fn get_block(
     context: &CommandExecutionContext,
     block_id: BlockId,
     include_tx: bool,
-) -> Result<(), anyhow::Error> {
+) -> Result<GetBlockResult, anyhow::Error> {
+    if include_tx {
+        let block = context.node_provider().get_block_with_txs(block_id).await?;
+
+        if let Some(block) = block {
+            return Ok(GetBlockResult::BlockWithTransaction(block));
+        }
+
+        return Ok(GetBlockResult::NotFound());
+    }
+
     let block = context.node_provider().get_block(block_id).await?;
 
-    println!("{:#?}", block);
+    if let Some(block) = block {
+        return Ok(GetBlockResult::Block(block));
+    }
 
-    Ok(())
+    Ok(GetBlockResult::NotFound())
 }
 
 // eth_getBlockTransactionCountByHash || eth_getBlockTransactionCountByNumber

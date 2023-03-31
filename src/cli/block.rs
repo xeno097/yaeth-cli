@@ -144,7 +144,7 @@ impl TryFrom<GetBlockById> for BlockId {
             GetBlockById::Number(block_number) => {
                 Ok(BlockId::Number(BlockNumber::Number(block_number.into())))
             }
-            _ => Err(anyhow::anyhow!("Failed to parse block identifier")),
+            GetBlockById::None => Err(anyhow::anyhow!("Missing block identifier")),
         }
     }
 }
@@ -166,11 +166,13 @@ pub fn parse(
         BlockCommand::Get(get_block_args) => {
             let include_tx = get_block_args.include_tx.unwrap_or_default();
 
-            let _ = context.execute(cmd::block::get_block(
+            let res = context.execute(cmd::block::get_block(
                 context,
                 get_block_by_id.try_into()?,
                 include_tx,
-            ));
+            ))?;
+
+            println!("{:#?}", res);
         }
         BlockCommand::Number(_) => todo!(),
         // {
