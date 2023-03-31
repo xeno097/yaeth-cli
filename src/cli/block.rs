@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{cmd, context::CommandExecutionContext};
+use crate::{cmd::block, context::CommandExecutionContext};
 use clap::{command, Args, Parser, Subcommand};
 use ethers::types::{BlockId, BlockNumber};
 
@@ -16,12 +16,15 @@ pub enum BlockCommand {
     /// Gets the number of the most recent block
     Number(NoArgs),
 
+    /// Collection of transaction related operations for the block with the provided identifier
     #[command(subcommand)]
     Transaction(BlockTransactionSubCommand),
 
+    /// Collection of uncle blocks related operations for the block with the provided identifier
     #[command(subcommand)]
     Uncle(BlockTransactionSubCommand),
 
+    /// Gets the transaction receipts for the block with the provided identifier
     Receipts(NoArgs),
 }
 
@@ -162,45 +165,30 @@ pub fn parse(
 
     let get_block_by_id = GetBlockById::new(hash, number, tag)?;
 
-    match command {
-        BlockCommand::Get(get_block_args) => {
-            let include_tx = get_block_args.include_tx.unwrap_or_default();
+    let res = match command {
+        BlockCommand::Get(get_block_args) => context.execute(block::get_block(
+            context,
+            get_block_by_id.try_into()?,
+            get_block_args.include_tx.unwrap_or_default(),
+        ))?,
+        BlockCommand::Number(_) => context.execute(block::get_block_number(context))?,
+        BlockCommand::Transaction(transaction_command) => match transaction_command {
+            BlockTransactionSubCommand::Count(_) => context.execute(
+                block::get_transaction_count(context, get_block_by_id.try_into()?),
+            )?,
+        },
+        BlockCommand::Uncle(uncle_command) => match uncle_command {
+            BlockTransactionSubCommand::Count(_) => context.execute(
+                block::get_uncle_block_count(context, get_block_by_id.try_into()?),
+            )?,
+        },
+        BlockCommand::Receipts(_) => context.execute(block::get_block_receipts(
+            context,
+            get_block_by_id.try_into()?,
+        ))?,
+    };
 
-            let res = context.execute(cmd::block::get_block(
-                context,
-                get_block_by_id.try_into()?,
-                include_tx,
-            ))?;
-
-            println!("{:#?}", res);
-        }
-        BlockCommand::Number(_) => todo!(),
-        // {
-        //     let _ = context.execute(cmd::block::get_block_number(context));
-        // }
-        BlockCommand::Transaction(_transaction_command) => todo!(),
-        // match transaction_command {
-        //     BlockTransactionSubCommand::Count(get_block_transaction_count) => {
-        //         let _ = context.execute(cmd::block::get_transaction_count(
-        //             context,
-        //             get_block_transaction_count,
-        //         ));
-        //     }
-        // },
-        BlockCommand::Uncle(_uncle_command) => todo!(),
-        // match uncle_command {
-        //     BlockTransactionSubCommand::Count(get_block_transaction_count) => {
-        //         let _ = context.execute(cmd::block::get_uncle_block_count(
-        //             context,
-        //             get_block_transaction_count,
-        //         ));
-        //     }
-        // },
-        BlockCommand::Receipts(_receipt_command) => todo!(),
-        // {
-        // let _ = context.execute(cmd::block::get_block_receipts(context, receipt_command));
-        // }
-    }
+    println!("{:#?}", res);
 
     Ok(())
 }
