@@ -2,7 +2,7 @@
 
 ## PENDING
 
-- [ ] Block:
+- [x] Block:
   - [x] eth_blockNumber
   - [x] eth_getBlockByHash
   - [x] eth_getBlockByNumber
