@@ -22,7 +22,6 @@
   - [ ] eth_sendTransaction
   
 - [ ] Account
-  - [ ] eth_accounts
   - [ ] eth_getBalance
   - [ ] eth_getCode
   - [ ] eth_getStorageAt
@@ -35,6 +34,7 @@
   - [ ] eth_maxPriorityFeePerGas
 
 - [ ] Utils
+  - [ ] eth_accounts
   - [ ] eth_chainId
   - [ ] eth_coinbase
   - [ ] eth_getProof

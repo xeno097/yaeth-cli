@@ -2,12 +2,16 @@ use crate::{cmd, context::CommandExecutionContext};
 
 use super::common::{BlockTag, GetBlockById, NoArgs};
 use clap::{command, Parser, Subcommand};
-use ethers::types::{Address, NameOrAddress};
+use ethers::types::{Address, Bytes, NameOrAddress, U256};
 
 #[derive(Subcommand, Debug)]
 #[command()]
 pub enum AccountCommand {
+    // Retrieves the account balance in the specified block (defaults to latest)
     Balance(NoArgs),
+
+    // Retrieves the account bytecode in the specified block (defaults to latest)
+    Code(NoArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -57,6 +61,24 @@ impl From<GetAddressById> for NameOrAddress {
     }
 }
 
+#[derive(Debug)]
+pub enum BlockNamespaceResult {
+    Bytecode(Bytes),
+    Number(U256),
+}
+
+impl From<U256> for BlockNamespaceResult {
+    fn from(value: U256) -> Self {
+        BlockNamespaceResult::Number(value)
+    }
+}
+
+impl From<Bytes> for BlockNamespaceResult {
+    fn from(value: Bytes) -> Self {
+        BlockNamespaceResult::Bytecode(value)
+    }
+}
+
 pub fn parse(
     context: &CommandExecutionContext,
     sub_command: AccountSubCommand,
@@ -74,12 +96,21 @@ pub fn parse(
 
     let block_id = GetBlockById::new(hash, number, tag)?;
 
-    let res = match command {
-        AccountCommand::Balance(_) => context.execute(cmd::account::get_balance(
-            context,
-            account_id.into(),
-            block_id.into(),
-        ))?,
+    let res: BlockNamespaceResult = match command {
+        AccountCommand::Balance(_) => context
+            .execute(cmd::account::get_balance(
+                context,
+                account_id.into(),
+                block_id.into(),
+            ))?
+            .into(),
+        AccountCommand::Code(_) => context
+            .execute(cmd::account::get_code(
+                context,
+                account_id.into(),
+                block_id.into(),
+            ))?
+            .into(),
     };
 
     println!("{:#?}", res);
