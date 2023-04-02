@@ -7,11 +7,17 @@ use ethers::types::{Address, Bytes, NameOrAddress, U256};
 #[derive(Subcommand, Debug)]
 #[command()]
 pub enum AccountCommand {
-    // Retrieves the account balance in the specified block (defaults to latest)
+    /// Retrieves the account balance in the specified block (defaults to latest)
     Balance(NoArgs),
 
-    // Retrieves the account bytecode in the specified block (defaults to latest)
+    /// Retrieves the account bytecode in the specified block (defaults to latest)
     Code(NoArgs),
+
+    /// Retrieves the account transaction count in the specified block (defaults to latest)
+    TransactionCount(NoArgs),
+
+    /// Retrieves the account nonce
+    Nonce(NoArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -110,6 +116,16 @@ pub fn parse(
                 account_id.into(),
                 block_id.into(),
             ))?
+            .into(),
+        AccountCommand::TransactionCount(_) => context
+            .execute(cmd::account::get_transaction_count(
+                context,
+                account_id.into(),
+                block_id.into(),
+            ))?
+            .into(),
+        AccountCommand::Nonce(_) => context
+            .execute(cmd::account::get_nonce(context, account_id.into()))?
             .into(),
     };
 
