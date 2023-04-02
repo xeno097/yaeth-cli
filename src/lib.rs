@@ -1,6 +1,6 @@
-pub mod cli;
-pub mod cmd;
-pub mod config;
+mod cli;
+mod cmd;
+mod config;
 mod context;
 pub mod run;
 
