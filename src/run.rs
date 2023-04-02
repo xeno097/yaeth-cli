@@ -1,5 +1,11 @@
 use clap::{command, Parser, Subcommand};
 
+use crate::{
+    cli::block::{self, BlockSubCommand},
+    config::{get_config, ConfigOverrides},
+    context::CommandExecutionContext,
+};
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct EntryPoint {
@@ -23,8 +29,8 @@ struct EntryPoint {
 #[command()]
 enum Command {
     /// Execute block related operations
-    #[command(subcommand)]
-    Block(NoSubCommand),
+    #[command()]
+    Block(BlockSubCommand),
 
     /// Execute account related operations
     #[command(subcommand)]
@@ -54,8 +60,14 @@ pub enum NoSubCommand {}
 pub fn run() -> Result<(), anyhow::Error> {
     let cli = EntryPoint::parse();
 
+    let config_overrides = ConfigOverrides::new(cli.priv_key, cli.rpc_url, cli.config_file);
+
+    let config = get_config(config_overrides)?;
+
+    let execution_context = CommandExecutionContext::new(config);
+
     match cli.command {
-        Command::Block(_) => todo!(),
+        Command::Block(cmd) => block::parse(&execution_context, cmd),
         Command::Account(_) => todo!(),
         Command::Transaction(_) => todo!(),
         Command::Event(_) => todo!(),

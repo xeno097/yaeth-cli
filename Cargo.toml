@@ -12,3 +12,4 @@ ethers = "2.0.0"
 config = "0.13.3"
 serde = { version = "1", features = ["derive"] }
 hex = "0.4.3"
+tokio = "1.26.0"
