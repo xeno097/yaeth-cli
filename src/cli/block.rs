@@ -4,8 +4,7 @@ use crate::{cmd::block, context::CommandExecutionContext};
 use clap::{command, Args, Parser, Subcommand};
 use ethers::types::{BlockId, BlockNumber};
 
-#[derive(Args, Debug)]
-pub struct NoArgs;
+use super::common::NoArgs;
 
 #[derive(Subcommand, Debug)]
 #[command()]

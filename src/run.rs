@@ -1,7 +1,10 @@
 use clap::{command, Parser, Subcommand};
 
 use crate::{
-    cli::block::{self, BlockSubCommand},
+    cli::{
+        account::{self, AccountSubCommand},
+        block::{self, BlockSubCommand},
+    },
     config::{get_config, ConfigOverrides},
     context::CommandExecutionContext,
 };
@@ -33,8 +36,8 @@ enum Command {
     Block(BlockSubCommand),
 
     /// Execute account related operations
-    #[command(subcommand)]
-    Account(NoSubCommand),
+    #[command()]
+    Account(AccountSubCommand),
 
     /// Execute transaction related operations
     #[command(subcommand)]
@@ -68,7 +71,7 @@ pub fn run() -> Result<(), anyhow::Error> {
 
     match cli.command {
         Command::Block(cmd) => block::parse(&execution_context, cmd),
-        Command::Account(_) => todo!(),
+        Command::Account(cmd) => account::parse(&execution_context, cmd),
         Command::Transaction(_) => todo!(),
         Command::Event(_) => todo!(),
         Command::Gas(_) => todo!(),
