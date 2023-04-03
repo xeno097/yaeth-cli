@@ -1,24 +1,8 @@
 use crate::{cmd, context::CommandExecutionContext};
 
 use super::common::{BlockTag, GetBlockById, NoArgs};
-use clap::{command, Parser, Subcommand};
-use ethers::types::{Address, Bytes, NameOrAddress, U256};
-
-#[derive(Subcommand, Debug)]
-#[command()]
-pub enum AccountCommand {
-    /// Retrieves the account balance in the specified block (defaults to latest)
-    Balance(NoArgs),
-
-    /// Retrieves the account bytecode in the specified block (defaults to latest)
-    Code(NoArgs),
-
-    /// Retrieves the account transaction count in the specified block (defaults to latest)
-    TransactionCount(NoArgs),
-
-    /// Retrieves the account nonce
-    Nonce(NoArgs),
-}
+use clap::{command, Args, Parser, Subcommand};
+use ethers::types::{Address, Bytes, NameOrAddress, H256, U256};
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -40,6 +24,42 @@ pub struct AccountSubCommand {
 
     #[command(subcommand)]
     command: AccountCommand,
+}
+
+#[derive(Subcommand, Debug)]
+#[command()]
+pub enum AccountCommand {
+    /// Retrieves the account balance in the specified block (defaults to latest)
+    Balance(NoArgs),
+
+    /// Retrieves the account bytecode in the specified block (defaults to latest)
+    Code(NoArgs),
+
+    /// Retrieves the account transaction count in the specified block (defaults to latest)
+    TransactionCount(NoArgs),
+
+    /// Retrieves the account nonce
+    Nonce(NoArgs),
+
+    /// Retrieves the value stored in the specified storage slot and block (defaults to latest)
+    StorageAt(GetStorageAtArgs),
+}
+
+#[derive(Args, Debug)]
+pub struct GetStorageAtArgs {
+    #[arg(short, long)]
+    slot: String,
+}
+
+impl TryFrom<GetStorageAtArgs> for H256 {
+    type Error = anyhow::Error;
+
+    fn try_from(value: GetStorageAtArgs) -> Result<Self, Self::Error> {
+        value
+            .slot
+            .parse()
+            .map_err(|_| anyhow::anyhow!("Invalid hash format"))
+    }
 }
 
 struct GetAddressById(NameOrAddress);
@@ -71,17 +91,24 @@ impl From<GetAddressById> for NameOrAddress {
 pub enum BlockNamespaceResult {
     Bytecode(Bytes),
     Number(U256),
+    Hash(H256),
 }
 
 impl From<U256> for BlockNamespaceResult {
     fn from(value: U256) -> Self {
-        BlockNamespaceResult::Number(value)
+        Self::Number(value)
     }
 }
 
 impl From<Bytes> for BlockNamespaceResult {
     fn from(value: Bytes) -> Self {
-        BlockNamespaceResult::Bytecode(value)
+        Self::Bytecode(value)
+    }
+}
+
+impl From<H256> for BlockNamespaceResult {
+    fn from(value: H256) -> Self {
+        Self::Hash(value)
     }
 }
 
@@ -126,6 +153,14 @@ pub fn parse(
             .into(),
         AccountCommand::Nonce(_) => context
             .execute(cmd::account::get_nonce(context, account_id.into()))?
+            .into(),
+        AccountCommand::StorageAt(storage_at_args) => context
+            .execute(cmd::account::get_storage_at(
+                context,
+                account_id.into(),
+                storage_at_args.try_into()?,
+                block_id.into(),
+            ))?
             .into(),
     };
 
