@@ -51,6 +51,7 @@ pub async fn get_nonce(
     get_transaction_count(context, account_id, BlockId::Number(BlockNumber::Latest)).await
 }
 
+// TODO: Implement a variant that recieves the expected storage slot type and parses the result based on that
 pub async fn get_storage_at(
     context: &CommandExecutionContext,
     account_id: NameOrAddress,
