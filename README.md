@@ -21,12 +21,11 @@
   - [ ] eth_sendRawTransaction
   - [ ] eth_sendTransaction
   
-- [ ] Account
-  - [ ] eth_accounts
-  - [ ] eth_getBalance
-  - [ ] eth_getCode
-  - [ ] eth_getStorageAt
-  - [ ] eth_getTransactionCount
+- [x] Account
+  - [x] eth_getBalance
+  - [x] eth_getCode
+  - [x] eth_getStorageAt
+  - [x] eth_getTransactionCount
 
 - [ ] Gas
   - [ ] eth_estimateGas
@@ -35,6 +34,7 @@
   - [ ] eth_maxPriorityFeePerGas
 
 - [ ] Utils
+  - [ ] eth_accounts
   - [ ] eth_chainId
   - [ ] eth_coinbase
   - [ ] eth_getProof
