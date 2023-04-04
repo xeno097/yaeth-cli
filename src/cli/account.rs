@@ -6,7 +6,7 @@ use ethers::types::{Address, Bytes, NameOrAddress, H256, U256};
 
 #[derive(Parser, Debug)]
 #[command()]
-pub struct AccountSubCommand {
+pub struct AccountCommand {
     #[arg(long)]
     address: Option<String>,
 
@@ -23,12 +23,12 @@ pub struct AccountSubCommand {
     tag: Option<BlockTag>,
 
     #[command(subcommand)]
-    command: AccountCommand,
+    command: AccountSubCommand,
 }
 
 #[derive(Subcommand, Debug)]
 #[command()]
-pub enum AccountCommand {
+pub enum AccountSubCommand {
     /// Retrieves the account balance in the specified block (defaults to latest)
     Balance(NoArgs),
 
@@ -114,9 +114,9 @@ impl From<H256> for BlockNamespaceResult {
 
 pub fn parse(
     context: &CommandExecutionContext,
-    sub_command: AccountSubCommand,
+    sub_command: AccountCommand,
 ) -> Result<(), anyhow::Error> {
-    let AccountSubCommand {
+    let AccountCommand {
         address,
         ens,
         hash,
@@ -130,31 +130,31 @@ pub fn parse(
     let block_id = GetBlockById::new(hash, number, tag)?;
 
     let res: BlockNamespaceResult = match command {
-        AccountCommand::Balance(_) => context
+        AccountSubCommand::Balance(_) => context
             .execute(cmd::account::get_balance(
                 context,
                 account_id.into(),
                 block_id.into(),
             ))?
             .into(),
-        AccountCommand::Code(_) => context
+        AccountSubCommand::Code(_) => context
             .execute(cmd::account::get_code(
                 context,
                 account_id.into(),
                 block_id.into(),
             ))?
             .into(),
-        AccountCommand::TransactionCount(_) => context
+        AccountSubCommand::TransactionCount(_) => context
             .execute(cmd::account::get_transaction_count(
                 context,
                 account_id.into(),
                 block_id.into(),
             ))?
             .into(),
-        AccountCommand::Nonce(_) => context
+        AccountSubCommand::Nonce(_) => context
             .execute(cmd::account::get_nonce(context, account_id.into()))?
             .into(),
-        AccountCommand::StorageAt(storage_at_args) => context
+        AccountSubCommand::StorageAt(storage_at_args) => context
             .execute(cmd::account::get_storage_at(
                 context,
                 account_id.into(),

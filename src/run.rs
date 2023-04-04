@@ -2,7 +2,7 @@ use clap::{command, Parser, Subcommand};
 
 use crate::{
     cli::{
-        account::{self, AccountSubCommand},
+        account::{self, AccountCommand},
         block::{self, BlockCommand},
     },
     config::{get_config, ConfigOverrides},
@@ -37,7 +37,7 @@ enum Command {
 
     /// Execute account related operations
     #[command()]
-    Account(AccountSubCommand),
+    Account(AccountCommand),
 
     /// Execute transaction related operations
     #[command(subcommand)]
