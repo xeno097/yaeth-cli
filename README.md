@@ -14,9 +14,9 @@
 
 - [ ] Transaction
   - [ ] eth_call
-  - [ ] eth_getTransactionByBlockHashAndIndex
-  - [ ] eth_getTransactionByBlockNumberAndIndex
-  - [ ] eth_getTransactionByHash
+  - [x] eth_getTransactionByBlockHashAndIndex
+  - [x] eth_getTransactionByBlockNumberAndIndex
+  - [x] eth_getTransactionByHash
   - [ ] eth_getTransactionReceipt
   - [ ] eth_sendRawTransaction
   - [ ] eth_sendTransaction
