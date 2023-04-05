@@ -4,9 +4,9 @@ use crate::{
     context::CommandExecutionContext,
 };
 
-use super::common::BlockTag;
+use super::common::{BlockTag, NoArgs};
 use clap::{arg, command, Args, Parser, Subcommand};
-use ethers::types::{Transaction, H256};
+use ethers::types::{Transaction, TransactionReceipt, H256};
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -21,7 +21,11 @@ pub struct TransactionCommand {
 #[derive(Subcommand, Debug)]
 #[command()]
 pub enum TransactionSubCommand {
+    /// Gets a transaction by the provided identifier
     Get(GetTransactionArgs),
+
+    /// Gets a transaction receipt by transaction hash
+    Receipt(NoArgs),
 }
 
 #[derive(Args, Debug)]
@@ -65,6 +69,7 @@ impl TryFrom<GetTransactionArgs> for GetTransaction {
 #[derive(Debug)]
 pub enum TransactionNamespaceResult {
     Transaction(Transaction),
+    Receipt(TransactionReceipt),
     NotFound(),
 }
 
@@ -89,6 +94,15 @@ pub fn parse(
                     TransactionNamespaceResult::Transaction,
                 )
         }
+        TransactionSubCommand::Receipt(_) => context
+            .execute(cmd::transaction::get_transaction_receipt(
+                context,
+                hash.ok_or(anyhow::anyhow!("Missing required argument hash"))?,
+            ))?
+            .map_or_else(
+                TransactionNamespaceResult::NotFound,
+                TransactionNamespaceResult::Receipt,
+            ),
     };
 
     println!("{:#?}", res);

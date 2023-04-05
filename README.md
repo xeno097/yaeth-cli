@@ -17,7 +17,7 @@
   - [x] eth_getTransactionByBlockHashAndIndex
   - [x] eth_getTransactionByBlockNumberAndIndex
   - [x] eth_getTransactionByHash
-  - [ ] eth_getTransactionReceipt
+  - [x] eth_getTransactionReceipt
   - [ ] eth_sendRawTransaction
   - [ ] eth_sendTransaction
   

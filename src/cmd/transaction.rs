@@ -1,7 +1,7 @@
 use anyhow::Ok;
 use ethers::{
     providers::Middleware,
-    types::{BlockId, Transaction, H256},
+    types::{BlockId, Transaction, TransactionReceipt, H256},
 };
 
 use crate::context::CommandExecutionContext;
@@ -48,4 +48,17 @@ async fn get_transaction_block_id_and_idx(
     }
 
     Ok(None)
+}
+
+// eth_getTransactionReceipt
+pub async fn get_transaction_receipt(
+    context: &CommandExecutionContext,
+    hash: H256,
+) -> anyhow::Result<Option<TransactionReceipt>> {
+    let receipt = context
+        .node_provider()
+        .get_transaction_receipt(hash)
+        .await?;
+
+    Ok(receipt)
 }
