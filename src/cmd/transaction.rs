@@ -1,7 +1,7 @@
 use anyhow::Ok;
 use ethers::{
-    providers::Middleware,
-    types::{BlockId, Transaction, TransactionReceipt, H256},
+    providers::{Http, JsonRpcClient, Middleware, PendingTransaction, Provider},
+    types::{BlockId, Bytes, Transaction, TransactionReceipt, H256},
 };
 
 use crate::context::CommandExecutionContext;
@@ -61,4 +61,29 @@ pub async fn get_transaction_receipt(
         .await?;
 
     Ok(receipt)
+}
+
+pub enum TxResult<'p, P: JsonRpcClient> {
+    PendingTransaction(PendingTransaction<'p, P>),
+    Receipt(Option<TransactionReceipt>),
+}
+
+// eth_sendRawTransaction
+pub async fn send_raw_transaction(
+    context: &CommandExecutionContext,
+    encoded_tx: Bytes,
+    wait: bool,
+) -> anyhow::Result<TxResult<Http>> {
+    let receipt = context
+        .node_provider()
+        .send_raw_transaction(encoded_tx)
+        .await?;
+
+    let res = if wait {
+        TxResult::Receipt(receipt.await?)
+    } else {
+        TxResult::PendingTransaction(receipt)
+    };
+
+    Ok(res)
 }
