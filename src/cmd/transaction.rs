@@ -1,7 +1,7 @@
 use anyhow::Ok;
 use ethers::{
-    providers::{Http, JsonRpcClient, Middleware, PendingTransaction, Provider},
-    types::{BlockId, Bytes, Transaction, TransactionReceipt, H256},
+    providers::{Http, Middleware, PendingTransaction},
+    types::{BlockId, Bytes, Transaction, TransactionReceipt, TransactionRequest, H256},
 };
 
 use crate::context::CommandExecutionContext;
@@ -63,27 +63,69 @@ pub async fn get_transaction_receipt(
     Ok(receipt)
 }
 
-pub enum TxResult<'p, P: JsonRpcClient> {
-    PendingTransaction(PendingTransaction<'p, P>),
+pub enum TransactionKind {
+    RawTransaction(Bytes),
+    TypedTransaction(TransactionRequest),
+}
+
+pub struct SendTransactionOptions {
+    tx_data: TransactionKind,
+    wait: bool,
+}
+
+impl SendTransactionOptions {
+    pub fn new(data: TransactionKind, wait: Option<bool>) -> Self {
+        Self {
+            tx_data: data,
+            wait: wait.unwrap_or(false),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum TxResult {
+    PendingTransaction(H256),
     Receipt(Option<TransactionReceipt>),
 }
 
+pub async fn send_transaction(
+    context: &CommandExecutionContext,
+    tx_data: SendTransactionOptions,
+) -> anyhow::Result<TxResult> {
+    let SendTransactionOptions { tx_data, wait } = tx_data;
+
+    let pending_tx = match tx_data {
+        TransactionKind::RawTransaction(raw_tx) => send_raw_transaction(context, raw_tx).await?,
+        TransactionKind::TypedTransaction(tx) => send_typed_transaction(context, tx).await?,
+    };
+
+    let res = if wait {
+        TxResult::Receipt(pending_tx.await?)
+    } else {
+        TxResult::PendingTransaction(pending_tx.tx_hash())
+    };
+
+    Ok(res)
+}
+
 // eth_sendRawTransaction
-pub async fn send_raw_transaction(
+async fn send_raw_transaction(
     context: &CommandExecutionContext,
     encoded_tx: Bytes,
-    wait: bool,
-) -> anyhow::Result<TxResult<Http>> {
+) -> anyhow::Result<PendingTransaction<Http>> {
     let receipt = context
         .node_provider()
         .send_raw_transaction(encoded_tx)
         .await?;
 
-    let res = if wait {
-        TxResult::Receipt(receipt.await?)
-    } else {
-        TxResult::PendingTransaction(receipt)
-    };
+    Ok(receipt)
+}
 
-    Ok(res)
+async fn send_typed_transaction(
+    context: &CommandExecutionContext,
+    tx: TransactionRequest,
+) -> anyhow::Result<PendingTransaction<Http>> {
+    let receipt = context.node_provider().send_transaction(tx, None).await?;
+
+    Ok(receipt)
 }
