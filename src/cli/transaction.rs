@@ -18,7 +18,8 @@ use ethers::{
 #[derive(Parser, Debug)]
 #[command()]
 pub struct TransactionCommand {
-    #[arg(long)]
+    /// Transaction hash. Required if using the receipt subcommand or get without options
+    #[arg(long, value_name = "TRANSACTION_HASH")]
     hash: Option<H256>,
 
     #[command(subcommand)]
@@ -40,22 +41,27 @@ pub enum TransactionSubCommand {
 
 #[derive(Args, Debug)]
 pub struct GetTransactionArgs {
-    #[arg(long, conflicts_with_all(["number","tag"]), requires= "index")]
+    /// Hash of the block where the target transaction is stored
+    #[arg(long, value_name = "BLOCK_HASH",conflicts_with_all(["number","tag"]), requires= "index")]
     hash: Option<String>,
 
-    #[arg(long, conflicts_with_all(["hash","tag"]),requires= "index")]
+    /// Number of the block where the target transaction is stored
+    #[arg(long, value_name = "BLOCK_NUMBER", conflicts_with_all(["hash","tag"]), requires= "index")]
     number: Option<u64>,
 
-    #[arg(long, conflicts_with_all(["hash","number"]),requires= "index")]
+    /// Tag of the block where the target transaction is stored
+    #[arg(long, value_name = "BLOCK_TAG", conflicts_with_all(["hash","number"]), requires= "index")]
     tag: Option<BlockTag>,
 
-    #[arg(long)]
+    /// Index of the transaction in the block
+    #[arg(long, value_name = "TRANSACTION_INDEX")]
     index: Option<u64>,
 }
 
 #[derive(Args, Debug)]
 pub struct SendTransactionArgs {
     // Raw tx args
+    /// Rlp encoded transaction data
     #[arg(long,conflicts_with_all(["from", "address", "ens","gas", "gas_price", "value", "data", "chain_id"]))]
     raw: Option<Bytes>,
 
@@ -75,6 +81,7 @@ pub struct SendTransactionArgs {
     #[arg(long)]
     gas_price: Option<U256>,
 
+    /// Amount of Eth to send
     #[arg(long)]
     value: Option<U256>,
 
@@ -88,6 +95,7 @@ pub struct SendTransactionArgs {
     chain_id: Option<U64>,
 
     // Config
+    /// Wait for the transaction receipt
     #[arg(long)]
     wait: Option<bool>,
 }
