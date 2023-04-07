@@ -8,6 +8,7 @@ use crate::{
 };
 
 use super::common::{BlockTag, NoArgs};
+use anyhow::anyhow;
 use clap::{arg, command, Args, Parser, Subcommand};
 use ethers::{
     abi::Address,
@@ -109,7 +110,19 @@ impl TryFrom<SendTransactionArgs> for SendTransactionOptions {
             wait,
         } = value;
 
-        // TODO: check that only raw is set and not any other field exlcuindg wait
+        let has_typed_tx_values = from.is_some()
+            || address.is_some()
+            || ens.is_some()
+            || gas.is_some()
+            || gas_price.is_some()
+            || value.is_some()
+            || data.is_some()
+            || nonce.is_some()
+            || chain_id.is_some();
+
+        if raw.is_some() && has_typed_tx_values {
+            return Err(anyhow!("Can't use --raw with typed transaction fields"));
+        }
 
         if let Some(raw) = raw {
             return Ok(Self::new(TransactionKind::RawTransaction(raw), wait));
