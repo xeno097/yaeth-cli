@@ -13,3 +13,5 @@ config = "0.13.3"
 serde = { version = "1", features = ["derive"] }
 hex = "0.4.3"
 tokio = "1.26.0"
+async-trait = "0.1.68"
+thiserror = "1.0.40"

@@ -67,7 +67,7 @@ pub fn run() -> Result<(), anyhow::Error> {
 
     let config = get_config(config_overrides)?;
 
-    let execution_context = CommandExecutionContext::new(config);
+    let execution_context = CommandExecutionContext::new(config)?;
 
     match cli.command {
         Command::Block(cmd) => block::parse(&execution_context, cmd),
