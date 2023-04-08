@@ -2,7 +2,7 @@ use crate::{
     cli::common::GetBlockById,
     cmd::{
         self,
-        transaction::{GetTransaction, SendTransactionOptions, TransactionKind, TxResult},
+        transaction::{GetTransaction, SendTransactionOptions, SendTxResult, TransactionKind},
     },
     context::CommandExecutionContext,
 };
@@ -208,7 +208,7 @@ impl TryFrom<GetTransactionArgs> for GetTransaction {
 #[derive(Debug)]
 pub enum TransactionNamespaceResult {
     Transaction(Transaction),
-    SentTransaction(TxResult),
+    SentTransaction(SendTxResult),
     Receipt(TransactionReceipt),
     NotFound(),
 }

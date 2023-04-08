@@ -3045,6 +3045,7 @@ dependencies = [
  "config",
  "ethers",
  "hex",
+ "rand",
  "serde",
  "thiserror",
  "tokio",
