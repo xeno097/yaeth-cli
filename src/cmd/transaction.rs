@@ -332,14 +332,19 @@ mod tests {
 
     mod send_transaction {
         use ethers::{
-            signers::LocalWallet,
+            signers::{LocalWallet, Signer},
             types::{
                 transaction::eip2718::TypedTransaction, Bytes, TransactionRequest, H160, U256,
             },
+            utils::Anvil,
         };
 
-        use crate::cmd::transaction::{
-            send_transaction, SendTransactionOptions, SendTxResult, TransactionKind,
+        use crate::{
+            cmd::transaction::{
+                send_transaction, SendTransactionOptions, SendTxResult, TransactionKind,
+            },
+            config::{get_config, ConfigOverrides},
+            context::CommandExecutionContext,
         };
 
         use super::setup_test;
@@ -450,6 +455,41 @@ mod tests {
 
             // Assert
             assert!(matches!(res, SendTxResult::Receipt(_)));
+
+            Ok(())
+        }
+
+        #[test]
+        fn should_send_the_transaction_from_the_private_key_address() -> anyhow::Result<()> {
+            // Arrange
+            let anvil = Anvil::new().spawn();
+
+            let receiver = *anvil.addresses().get(1).unwrap();
+            let priv_key = hex::encode(anvil.keys().get(0).unwrap().to_be_bytes());
+            let signer: LocalWallet = priv_key.parse()?;
+
+            let overrides = ConfigOverrides::new(Some(priv_key), Some(anvil.endpoint()), None);
+
+            let config = get_config(overrides)?;
+
+            let execution_context = CommandExecutionContext::new(config)?;
+
+            let typed_tx = TransactionRequest::new().to(receiver);
+
+            // Act
+            let res = execution_context.execute(send_transaction(
+                &execution_context,
+                SendTransactionOptions::new(
+                    TransactionKind::TypedTransaction(typed_tx),
+                    Some(true),
+                ),
+            ))?;
+
+            // Assert
+            match res {
+                SendTxResult::PendingTransaction(_) => panic!("Should be a receipt!"),
+                SendTxResult::Receipt(r) => assert_eq!(r.unwrap().from, signer.address()),
+            }
 
             Ok(())
         }

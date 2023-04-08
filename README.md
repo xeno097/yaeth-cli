@@ -18,8 +18,8 @@
   - [x] eth_getTransactionByBlockNumberAndIndex
   - [x] eth_getTransactionByHash
   - [x] eth_getTransactionReceipt
-  - [ ] eth_sendRawTransaction
-  - [ ] eth_sendTransaction
+  - [x] eth_sendRawTransaction
+  - [x] eth_sendTransaction
   
 - [x] Account
   - [x] eth_getBalance
