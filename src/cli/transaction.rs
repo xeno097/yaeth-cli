@@ -10,12 +10,12 @@ use crate::{
 };
 
 use super::common::{GetBlockArgs, NoArgs};
-use anyhow::anyhow;
 use clap::{arg, command, Args, Parser, Subcommand};
 use ethers::{
     abi::Address,
     types::{Bytes, Transaction, TransactionReceipt, TransactionRequest, H256, U256, U64},
 };
+use thiserror::Error;
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -103,10 +103,16 @@ struct TypedTransactionArgs {
     chain_id: Option<U64>,
 }
 
-impl TryFrom<TypedTransactionArgs> for TransactionRequest {
-    type Error = anyhow::Error;
+#[derive(Error, Debug)]
+pub enum TypedTransactionParserError {
+    #[error("Provided both ens and address")]
+    ConflictingTransactionReceiver,
+}
 
-    fn try_from(value: TypedTransactionArgs) -> anyhow::Result<Self> {
+impl TryFrom<TypedTransactionArgs> for TransactionRequest {
+    type Error = TypedTransactionParserError;
+
+    fn try_from(value: TypedTransactionArgs) -> Result<Self, Self::Error> {
         let TypedTransactionArgs {
             from,
             address,
@@ -122,7 +128,7 @@ impl TryFrom<TypedTransactionArgs> for TransactionRequest {
         let mut tx = TransactionRequest::new();
 
         if ens.is_some() && address.is_some() {
-            return Err(anyhow::anyhow!("ens and address are conflicting arguments"));
+            return Err(Self::Error::ConflictingTransactionReceiver);
         }
 
         if let Some(from) = from {
@@ -165,8 +171,20 @@ impl TryFrom<TypedTransactionArgs> for TransactionRequest {
     }
 }
 
+#[derive(Error, Debug)]
+pub enum SendTransactionParserError {
+    #[error("Specified raw transaction and typed transaction data.")]
+    ConflictingTxData,
+
+    #[error("{0}")]
+    InvalidTypedTx(TypedTransactionParserError),
+
+    #[error("Missing transaction data. Either a raw or typed transaction must be provided.")]
+    MissingTxData,
+}
+
 impl TryFrom<SendTransactionArgs> for SendTransactionOptions {
-    type Error = anyhow::Error;
+    type Error = SendTransactionParserError;
 
     fn try_from(value: SendTransactionArgs) -> Result<Self, Self::Error> {
         let SendTransactionArgs {
@@ -176,7 +194,7 @@ impl TryFrom<SendTransactionArgs> for SendTransactionOptions {
         } = value;
 
         if raw.is_some() && typed_tx.is_some() {
-            return Err(anyhow!("Can't use --raw with typed transaction fields"));
+            return Err(Self::Error::ConflictingTxData);
         }
 
         if let Some(raw) = raw {
@@ -185,12 +203,14 @@ impl TryFrom<SendTransactionArgs> for SendTransactionOptions {
 
         if let Some(typed_tx) = typed_tx {
             return Ok(Self::new(
-                TransactionKind::TypedTransaction(typed_tx.try_into()?),
+                TransactionKind::TypedTransaction(
+                    typed_tx.try_into().map_err(Self::Error::InvalidTypedTx)?,
+                ),
                 wait,
             ));
         }
 
-        Err(anyhow!("Some bobo"))
+        Err(Self::Error::MissingTxData)
     }
 }
 
@@ -225,17 +245,25 @@ pub struct SimulateTransactionArgs {
     get_block_by_id: GetBlockArgs,
 }
 
-impl TryFrom<SimulateTransactionArgs> for SimulateTransactionOptions {
-    type Error = anyhow::Error;
+#[derive(Error, Debug)]
+pub enum SimulateTransactionParserError {
+    #[error("{0}")]
+    TypedTxParserError(TypedTransactionParserError),
+}
 
-    fn try_from(value: SimulateTransactionArgs) -> anyhow::Result<Self> {
+impl TryFrom<SimulateTransactionArgs> for SimulateTransactionOptions {
+    type Error = SimulateTransactionParserError;
+
+    fn try_from(value: SimulateTransactionArgs) -> Result<Self, Self::Error> {
         let SimulateTransactionArgs {
             typed_tx,
             get_block_by_id,
         } = value;
 
         Ok(SimulateTransactionOptions::new(
-            typed_tx.try_into()?,
+            typed_tx
+                .try_into()
+                .map_err(Self::Error::TypedTxParserError)?,
             get_block_by_id.try_into().ok(),
         ))
     }

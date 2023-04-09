@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use clap::Args;
 use ethers::types::{BlockId, BlockNumber, H256};
+use thiserror::Error;
 
 #[derive(Args, Debug)]
 pub struct NoArgs;
@@ -62,13 +63,30 @@ pub struct GetBlockArgs {
     tag: Option<BlockTag>,
 }
 
-impl TryFrom<GetBlockArgs> for BlockId {
-    type Error = anyhow::Error;
+#[derive(Error, Debug)]
+pub enum BlockIdParserError {
+    #[error("Missing block identifier. A block tag, number or hash must be provided.")]
+    MissingBlockId,
 
-    fn try_from(value: GetBlockArgs) -> anyhow::Result<Self> {
+    #[error(
+        "Provided multiple block identifiers. Only a block tag, number or hash must be provided."
+    )]
+    ConflictingBlockId,
+}
+
+impl TryFrom<GetBlockArgs> for BlockId {
+    type Error = BlockIdParserError;
+
+    fn try_from(value: GetBlockArgs) -> Result<Self, Self::Error> {
         let GetBlockArgs { hash, number, tag } = value;
 
-        // TODO: check that every field is defined
+        let check1 = hash.is_some() && number.is_some();
+        let check2 = hash.is_some() && tag.is_some();
+        let check3 = number.is_some() && tag.is_some();
+
+        if check1 || check2 || check3 {
+            return Err(Self::Error::ConflictingBlockId);
+        }
 
         if let Some(hash) = hash {
             return Ok(Self::Hash(hash));
@@ -82,7 +100,7 @@ impl TryFrom<GetBlockArgs> for BlockId {
             return Ok(tag.into());
         }
 
-        Err(anyhow::anyhow!("Some bobo"))
+        Err(Self::Error::MissingBlockId)
     }
 }
 
