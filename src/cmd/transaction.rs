@@ -130,6 +130,26 @@ async fn send_typed_transaction(
     Ok(receipt)
 }
 
+pub struct SimulateTransactionOptions(TransactionRequest, Option<BlockId>);
+
+impl SimulateTransactionOptions {
+    pub fn new(tx: TransactionRequest, block_id: Option<BlockId>) -> Self {
+        Self(tx, block_id)
+    }
+}
+
+pub async fn call(
+    context: &CommandExecutionContext,
+    options: SimulateTransactionOptions,
+) -> anyhow::Result<Bytes> {
+    let res = context
+        .node_provider()
+        .call(&options.0.into(), options.1)
+        .await?;
+
+    Ok(res)
+}
+
 #[cfg(test)]
 mod tests {
     use ethers::{

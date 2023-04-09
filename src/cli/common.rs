@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use clap::Args;
-use ethers::types::{BlockId, BlockNumber};
+use ethers::types::{BlockId, BlockNumber, H256};
 
 #[derive(Args, Debug)]
 pub struct NoArgs;
@@ -47,6 +47,48 @@ impl From<BlockTag> for BlockId {
 
 pub struct GetBlockById(BlockId);
 
+#[derive(Args, Debug)]
+pub struct GetBlockArgs {
+    /// Hash of the target block
+    #[arg(long, value_name = "BLOCK_HASH",conflicts_with_all(["number","tag"]))]
+    hash: Option<H256>,
+
+    /// Number of the target block
+    #[arg(long, value_name = "BLOCK_NUMBER", conflicts_with_all(["hash","tag"]))]
+    number: Option<u64>,
+
+    /// Tag of the target block
+    #[arg(long, value_name = "BLOCK_TAG", conflicts_with_all(["hash","number"]))]
+    tag: Option<BlockTag>,
+}
+
+impl TryFrom<GetBlockArgs> for BlockId {
+    type Error = anyhow::Error;
+
+    fn try_from(value: GetBlockArgs) -> anyhow::Result<Self> {
+        let GetBlockArgs { hash, number, tag } = value;
+
+        // TODO: check that every field is defined
+
+        if let Some(hash) = hash {
+            return Ok(Self::Hash(hash));
+        }
+
+        if let Some(number) = number {
+            return Ok(Self::Number(BlockNumber::Number(number.into())));
+        }
+
+        if let Some(tag) = tag {
+            return Ok(tag.into());
+        }
+
+        Err(anyhow::anyhow!("Some bobo"))
+    }
+}
+
+#[deprecated(
+    note = "Please use the GetBlockArs type and the try_into method to perform the conversion"
+)]
 impl GetBlockById {
     pub fn new(
         hash: Option<String>,

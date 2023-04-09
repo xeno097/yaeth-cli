@@ -1,13 +1,15 @@
 use crate::{
-    cli::common::GetBlockById,
     cmd::{
         self,
-        transaction::{GetTransaction, SendTransactionOptions, SendTxResult, TransactionKind},
+        transaction::{
+            GetTransaction, SendTransactionOptions, SendTxResult, SimulateTransactionOptions,
+            TransactionKind,
+        },
     },
     context::CommandExecutionContext,
 };
 
-use super::common::{BlockTag, NoArgs};
+use super::common::{GetBlockArgs, NoArgs};
 use anyhow::anyhow;
 use clap::{arg, command, Args, Parser, Subcommand};
 use ethers::{
@@ -37,22 +39,17 @@ pub enum TransactionSubCommand {
 
     /// Sends a transaction
     Send(SendTransactionArgs),
+
+    /// Simulates a transaction without using any gas
+    Call(SimulateTransactionArgs),
 }
 
 #[derive(Args, Debug)]
 pub struct GetTransactionArgs {
-    /// Hash of the block where the target transaction is stored
-    #[arg(long, value_name = "BLOCK_HASH",conflicts_with_all(["number","tag"]), requires= "index")]
-    hash: Option<String>,
+    #[clap(flatten)]
+    get_block_by_id: GetBlockArgs,
 
-    /// Number of the block where the target transaction is stored
-    #[arg(long, value_name = "BLOCK_NUMBER", conflicts_with_all(["hash","tag"]), requires= "index")]
-    number: Option<u64>,
-
-    /// Tag of the block where the target transaction is stored
-    #[arg(long, value_name = "BLOCK_TAG", conflicts_with_all(["hash","number"]), requires= "index")]
-    tag: Option<BlockTag>,
-
+    // TODO: reimplement the required constraint if any of the block ids field is set
     /// Index of the transaction in the block
     #[arg(long, value_name = "TRANSACTION_INDEX")]
     index: Option<u64>,
@@ -66,6 +63,17 @@ pub struct SendTransactionArgs {
     raw: Option<Bytes>,
 
     // Typed Tx args
+    #[clap(flatten)]
+    typed_tx: Option<TypedTransactionArgs>,
+
+    // Config
+    /// Wait for the transaction receipt
+    #[arg(long)]
+    wait: Option<bool>,
+}
+
+#[derive(Args, Debug)]
+struct TypedTransactionArgs {
     #[arg(long)]
     from: Option<Address>,
 
@@ -93,19 +101,13 @@ pub struct SendTransactionArgs {
 
     #[arg(long)]
     chain_id: Option<U64>,
-
-    // Config
-    /// Wait for the transaction receipt
-    #[arg(long)]
-    wait: Option<bool>,
 }
 
-impl TryFrom<SendTransactionArgs> for SendTransactionOptions {
+impl TryFrom<TypedTransactionArgs> for TransactionRequest {
     type Error = anyhow::Error;
 
-    fn try_from(value: SendTransactionArgs) -> Result<Self, Self::Error> {
-        let SendTransactionArgs {
-            raw,
+    fn try_from(value: TypedTransactionArgs) -> anyhow::Result<Self> {
+        let TypedTransactionArgs {
             from,
             address,
             ens,
@@ -115,26 +117,7 @@ impl TryFrom<SendTransactionArgs> for SendTransactionOptions {
             data,
             nonce,
             chain_id,
-            wait,
         } = value;
-
-        let has_typed_tx_values = from.is_some()
-            || address.is_some()
-            || ens.is_some()
-            || gas.is_some()
-            || gas_price.is_some()
-            || value.is_some()
-            || data.is_some()
-            || nonce.is_some()
-            || chain_id.is_some();
-
-        if raw.is_some() && has_typed_tx_values {
-            return Err(anyhow!("Can't use --raw with typed transaction fields"));
-        }
-
-        if let Some(raw) = raw {
-            return Ok(Self::new(TransactionKind::RawTransaction(raw), wait));
-        }
 
         let mut tx = TransactionRequest::new();
 
@@ -178,7 +161,36 @@ impl TryFrom<SendTransactionArgs> for SendTransactionOptions {
             tx = tx.chain_id(chain_id)
         }
 
-        Ok(Self::new(TransactionKind::TypedTransaction(tx), wait))
+        Ok(tx)
+    }
+}
+
+impl TryFrom<SendTransactionArgs> for SendTransactionOptions {
+    type Error = anyhow::Error;
+
+    fn try_from(value: SendTransactionArgs) -> Result<Self, Self::Error> {
+        let SendTransactionArgs {
+            raw,
+            typed_tx,
+            wait,
+        } = value;
+
+        if raw.is_some() && typed_tx.is_some() {
+            return Err(anyhow!("Can't use --raw with typed transaction fields"));
+        }
+
+        if let Some(raw) = raw {
+            return Ok(Self::new(TransactionKind::RawTransaction(raw), wait));
+        }
+
+        if let Some(typed_tx) = typed_tx {
+            return Ok(Self::new(
+                TransactionKind::TypedTransaction(typed_tx.try_into()?),
+                wait,
+            ));
+        }
+
+        Err(anyhow!("Some bobo"))
     }
 }
 
@@ -187,20 +199,44 @@ impl TryFrom<GetTransactionArgs> for GetTransaction {
 
     fn try_from(value: GetTransactionArgs) -> Result<Self, Self::Error> {
         let GetTransactionArgs {
-            hash,
+            get_block_by_id,
             index,
-            number,
-            tag,
         } = value;
 
-        let block_id = GetBlockById::new(hash, number, tag)?;
-
         if let Some(idx) = index {
-            return Ok(Self::BlockIdAndIdx(block_id.into(), idx as usize));
+            return Ok(Self::BlockIdAndIdx(
+                get_block_by_id.try_into()?,
+                idx as usize,
+            ));
         }
 
         Err(anyhow::anyhow!(
             "Not provided enough identifiers for a transaction"
+        ))
+    }
+}
+
+#[derive(Args, Debug)]
+pub struct SimulateTransactionArgs {
+    #[clap(flatten)]
+    typed_tx: TypedTransactionArgs,
+
+    #[clap(flatten)]
+    get_block_by_id: GetBlockArgs,
+}
+
+impl TryFrom<SimulateTransactionArgs> for SimulateTransactionOptions {
+    type Error = anyhow::Error;
+
+    fn try_from(value: SimulateTransactionArgs) -> anyhow::Result<Self> {
+        let SimulateTransactionArgs {
+            typed_tx,
+            get_block_by_id,
+        } = value;
+
+        Ok(SimulateTransactionOptions::new(
+            typed_tx.try_into()?,
+            get_block_by_id.try_into().ok(),
         ))
     }
 }
@@ -210,6 +246,7 @@ pub enum TransactionNamespaceResult {
     Transaction(Transaction),
     SentTransaction(SendTxResult),
     Receipt(TransactionReceipt),
+    Call(Bytes),
     NotFound(),
 }
 
@@ -249,6 +286,12 @@ pub fn parse(
                 send_transaction_args.try_into()?,
             ))
             .map(TransactionNamespaceResult::SentTransaction)?,
+        TransactionSubCommand::Call(simulate_transaction_args) => context
+            .execute(cmd::transaction::call(
+                context,
+                simulate_transaction_args.try_into()?,
+            ))
+            .map(TransactionNamespaceResult::Call)?,
     };
 
     println!("{:#?}", res);
