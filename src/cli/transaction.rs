@@ -9,7 +9,7 @@ use crate::{
     context::CommandExecutionContext,
 };
 
-use super::common::{GetBlockArgs, NoArgs};
+use super::common::{BlockIdParserError, GetBlockArgs, NoArgs};
 use clap::{arg, command, Args, Parser, Subcommand};
 use ethers::{
     abi::Address,
@@ -214,8 +214,17 @@ impl TryFrom<SendTransactionArgs> for SendTransactionOptions {
     }
 }
 
+#[derive(Error, Debug)]
+pub enum GetTransactionParserError {
+    #[error("{0}")]
+    InvalidBlockId(BlockIdParserError),
+
+    #[error("Missing transaction index.")]
+    MissingIndex,
+}
+
 impl TryFrom<GetTransactionArgs> for GetTransaction {
-    type Error = anyhow::Error;
+    type Error = GetTransactionParserError;
 
     fn try_from(value: GetTransactionArgs) -> Result<Self, Self::Error> {
         let GetTransactionArgs {
@@ -223,15 +232,13 @@ impl TryFrom<GetTransactionArgs> for GetTransaction {
             index,
         } = value;
 
-        if let Some(idx) = index {
-            return Ok(Self::BlockIdAndIdx(
-                get_block_by_id.try_into()?,
-                idx as usize,
-            ));
-        }
+        let idx = index.ok_or(Self::Error::MissingIndex)?;
 
-        Err(anyhow::anyhow!(
-            "Not provided enough identifiers for a transaction"
+        Ok(Self::BlockIdAndIdx(
+            get_block_by_id
+                .try_into()
+                .map_err(Self::Error::InvalidBlockId)?,
+            idx as usize,
         ))
     }
 }
@@ -285,24 +292,22 @@ pub fn parse(
     let TransactionCommand { hash, command } = sub_command;
 
     let res: TransactionNamespaceResult = match command {
-        TransactionSubCommand::Get(get_transaction_args) => {
-            let tx_id = if let Some(hash) = hash {
-                GetTransaction::TransactionHash(hash)
-            } else {
-                get_transaction_args.try_into()?
-            };
-
-            context
-                .execute(cmd::transaction::get_transaction(context, tx_id))?
-                .map_or_else(
-                    TransactionNamespaceResult::NotFound,
-                    TransactionNamespaceResult::Transaction,
-                )
-        }
+        TransactionSubCommand::Get(get_transaction_args) => context
+            .execute(cmd::transaction::get_transaction(
+                context,
+                hash.map(GetTransaction::TransactionHash)
+                    .map_or_else(|| get_transaction_args.try_into(), Ok)?,
+            ))?
+            .map_or_else(
+                TransactionNamespaceResult::NotFound,
+                TransactionNamespaceResult::Transaction,
+            ),
         TransactionSubCommand::Receipt(_) => context
             .execute(cmd::transaction::get_transaction_receipt(
                 context,
-                hash.ok_or(anyhow::anyhow!("Missing required argument hash"))?,
+                hash.ok_or(anyhow::anyhow!(
+                    "Missing required argument transaction hash"
+                ))?,
             ))?
             .map_or_else(
                 TransactionNamespaceResult::NotFound,
