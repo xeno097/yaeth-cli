@@ -13,7 +13,7 @@
   - [x] eth_getUncleCountByBlockNumber
 
 - [ ] Transaction
-  - [ ] eth_call
+  - [x] eth_call
   - [x] eth_getTransactionByBlockHashAndIndex
   - [x] eth_getTransactionByBlockNumberAndIndex
   - [x] eth_getTransactionByHash

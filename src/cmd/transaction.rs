@@ -514,4 +514,32 @@ mod tests {
             Ok(())
         }
     }
+
+    mod call {
+        use ethers::types::TransactionRequest;
+
+        use crate::cmd::transaction::{call, tests::setup_test, SimulateTransactionOptions};
+
+        #[test]
+        fn should_simulate_the_transaction() -> anyhow::Result<()> {
+            // Arrange
+            let (execution_context, anvil) = setup_test()?;
+
+            let sender = *anvil.addresses().get(0).unwrap();
+            let receiver = *anvil.addresses().get(1).unwrap();
+
+            let typed_tx = TransactionRequest::new().from(sender).to(receiver);
+
+            // Act
+            let res = execution_context.execute(call(
+                &execution_context,
+                SimulateTransactionOptions::new(typed_tx, None),
+            ));
+
+            // Assert
+            assert!(res.is_ok());
+
+            Ok(())
+        }
+    }
 }
