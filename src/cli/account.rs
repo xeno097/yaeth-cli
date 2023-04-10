@@ -3,6 +3,7 @@ use crate::{cmd, context::CommandExecutionContext};
 use super::common::{GetBlockArgs, NoArgs};
 use clap::{command, Args, Parser, Subcommand};
 use ethers::types::{Bytes, NameOrAddress, H160, H256, U256};
+use thiserror::Error;
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -26,22 +27,33 @@ pub struct GetAccountArgs {
     ens: Option<String>,
 }
 
+#[derive(Error, Debug)]
+pub enum GetAccountParserError {
+    #[error("Provided multiple address identifiers. Either an ens or address must be provided.")]
+    ConflictingAddressId,
+
+    #[error("Missing address identifier. Only an ens or address must be provided.")]
+    MissingAddressId,
+}
+
 impl TryFrom<GetAccountArgs> for NameOrAddress {
-    type Error = anyhow::Error;
+    type Error = GetAccountParserError;
 
     fn try_from(GetAccountArgs { address, ens }: GetAccountArgs) -> Result<Self, Self::Error> {
         // Sanity check
         if address.is_some() && ens.is_some() {
-            return Err(anyhow::anyhow!("Provided multiple address identifiers"));
+            return Err(Self::Error::ConflictingAddressId);
         }
 
-        let ret = if let Some(address) = address {
-            NameOrAddress::Address(address)
-        } else {
-            NameOrAddress::Name(ens.unwrap())
+        if let Some(address) = address {
+            return Ok(NameOrAddress::Address(address));
         };
 
-        Ok(ret)
+        if let Some(ens) = ens {
+            return Ok(NameOrAddress::Name(ens));
+        };
+
+        Err(Self::Error::MissingAddressId)
     }
 }
 
