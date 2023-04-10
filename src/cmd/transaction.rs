@@ -152,54 +152,6 @@ pub async fn call(
 
 #[cfg(test)]
 mod tests {
-    use ethers::{
-        providers::Middleware,
-        types::{TransactionReceipt, TransactionRequest, H160, H256, U256},
-        utils::{Anvil, AnvilInstance},
-    };
-    use rand::Rng;
-
-    use crate::{
-        config::{get_config, ConfigOverrides},
-        context::{CommandExecutionContext, NodeProvider},
-    };
-
-    fn setup_test() -> anyhow::Result<(CommandExecutionContext, AnvilInstance)> {
-        let anvil = Anvil::new().spawn();
-
-        let overrides = ConfigOverrides::new(None, Some(anvil.endpoint()), None);
-
-        let config = get_config(overrides)?;
-
-        let execution_context = CommandExecutionContext::new(config)?;
-
-        Ok((execution_context, anvil))
-    }
-
-    async fn send_tx_helper(
-        node_provider: &NodeProvider,
-        sender: H160,
-        receiver: H160,
-        value: U256,
-    ) -> anyhow::Result<TransactionReceipt> {
-        let tx = TransactionRequest::new()
-            .value(value)
-            .from(sender)
-            .to(receiver);
-
-        let tx = node_provider.send_transaction(tx, None).await?.await?;
-
-        Ok(tx.unwrap())
-    }
-
-    fn generate_random_h256() -> H256 {
-        let mut data = [0u8; 32];
-
-        rand::thread_rng().fill(&mut data);
-
-        data.into()
-    }
-
     mod get_transaction {
 
         use ethers::{
@@ -207,10 +159,9 @@ mod tests {
             utils::parse_ether,
         };
 
-        use crate::cmd::transaction::{
-            get_transaction,
-            tests::{generate_random_h256, send_tx_helper, setup_test},
-            GetTransaction,
+        use crate::cmd::{
+            helpers::test::{generate_random_h256, send_tx_helper, setup_test},
+            transaction::{get_transaction, GetTransaction},
         };
 
         #[test]
@@ -289,9 +240,9 @@ mod tests {
 
         use ethers::utils::parse_ether;
 
-        use crate::cmd::transaction::{
-            get_transaction_receipt,
-            tests::{generate_random_h256, send_tx_helper, setup_test},
+        use crate::cmd::{
+            helpers::test::{generate_random_h256, send_tx_helper, setup_test},
+            transaction::get_transaction_receipt,
         };
 
         #[test]
@@ -360,14 +311,15 @@ mod tests {
         };
 
         use crate::{
-            cmd::transaction::{
-                send_transaction, SendTransactionOptions, SendTxResult, TransactionKind,
+            cmd::{
+                helpers::test::setup_test,
+                transaction::{
+                    send_transaction, SendTransactionOptions, SendTxResult, TransactionKind,
+                },
             },
             config::{get_config, ConfigOverrides},
             context::CommandExecutionContext,
         };
-
-        use super::setup_test;
 
         fn get_raw_transaction(
             signer: &LocalWallet,
@@ -518,7 +470,10 @@ mod tests {
     mod call {
         use ethers::types::TransactionRequest;
 
-        use crate::cmd::transaction::{call, tests::setup_test, SimulateTransactionOptions};
+        use crate::cmd::{
+            helpers::test::setup_test,
+            transaction::{call, SimulateTransactionOptions},
+        };
 
         #[test]
         fn should_simulate_the_transaction() -> anyhow::Result<()> {
