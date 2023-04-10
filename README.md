@@ -13,13 +13,13 @@
   - [x] eth_getUncleCountByBlockNumber
 
 - [ ] Transaction
-  - [ ] eth_call
-  - [ ] eth_getTransactionByBlockHashAndIndex
-  - [ ] eth_getTransactionByBlockNumberAndIndex
-  - [ ] eth_getTransactionByHash
-  - [ ] eth_getTransactionReceipt
-  - [ ] eth_sendRawTransaction
-  - [ ] eth_sendTransaction
+  - [x] eth_call
+  - [x] eth_getTransactionByBlockHashAndIndex
+  - [x] eth_getTransactionByBlockNumberAndIndex
+  - [x] eth_getTransactionByHash
+  - [x] eth_getTransactionReceipt
+  - [x] eth_sendRawTransaction
+  - [x] eth_sendTransaction
   
 - [x] Account
   - [x] eth_getBalance

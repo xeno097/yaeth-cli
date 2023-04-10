@@ -4,6 +4,7 @@ use crate::{
     cli::{
         account::{self, AccountCommand},
         block::{self, BlockCommand},
+        transaction::{self, TransactionCommand},
     },
     config::{get_config, ConfigOverrides},
     context::CommandExecutionContext,
@@ -40,8 +41,7 @@ enum Command {
     Account(AccountCommand),
 
     /// Execute transaction related operations
-    #[command(subcommand)]
-    Transaction(NoSubCommand),
+    Transaction(TransactionCommand),
 
     /// Execute event related operations
     #[command(subcommand)]
@@ -67,12 +67,12 @@ pub fn run() -> Result<(), anyhow::Error> {
 
     let config = get_config(config_overrides)?;
 
-    let execution_context = CommandExecutionContext::new(config);
+    let execution_context = CommandExecutionContext::new(config)?;
 
     match cli.command {
         Command::Block(cmd) => block::parse(&execution_context, cmd),
         Command::Account(cmd) => account::parse(&execution_context, cmd),
-        Command::Transaction(_) => todo!(),
+        Command::Transaction(cmd) => transaction::parse(&execution_context, cmd),
         Command::Event(_) => todo!(),
         Command::Gas(_) => todo!(),
         Command::Utils(_) => todo!(),
