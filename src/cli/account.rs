@@ -29,11 +29,11 @@ pub struct GetAccountArgs {
 
 #[derive(Error, Debug)]
 pub enum GetAccountParserError {
-    #[error("Provided multiple address identifiers. Either an ens or address must be provided.")]
-    ConflictingAddressId,
+    #[error("Provided multiple account identifiers. Either an ens or address must be provided.")]
+    ConflictingAccountId,
 
-    #[error("Missing address identifier. Only an ens or address must be provided.")]
-    MissingAddressId,
+    #[error("Missing account identifier. An ens or address must be provided.")]
+    MissingAccountId,
 }
 
 impl TryFrom<GetAccountArgs> for NameOrAddress {
@@ -42,7 +42,7 @@ impl TryFrom<GetAccountArgs> for NameOrAddress {
     fn try_from(GetAccountArgs { address, ens }: GetAccountArgs) -> Result<Self, Self::Error> {
         // Sanity check
         if address.is_some() && ens.is_some() {
-            return Err(Self::Error::ConflictingAddressId);
+            return Err(Self::Error::ConflictingAccountId);
         }
 
         if let Some(address) = address {
@@ -53,12 +53,13 @@ impl TryFrom<GetAccountArgs> for NameOrAddress {
             return Ok(NameOrAddress::Name(ens));
         };
 
-        Err(Self::Error::MissingAddressId)
+        Err(Self::Error::MissingAccountId)
     }
 }
 
 #[derive(Args, Debug)]
 pub struct GetStorageAtArgs {
+    /// The storage slot where the target data is stored
     #[arg(short, long)]
     slot: H256,
 }
