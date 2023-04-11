@@ -61,10 +61,12 @@ pub fn parse(
         command,
     } = sub_command;
 
+    let node_provider = context.node_provider();
+
     let res: BlockNamespaceResult = match command {
         BlockSubCommand::Get(GetBlockArgs { include_tx }) => context
             .execute(block::get_block(
-                context,
+                node_provider,
                 get_block_by_id.try_into()?,
                 include_tx.unwrap_or_default(),
             ))?
@@ -73,11 +75,11 @@ pub fn parse(
                 BlockNamespaceResult::Block,
             ),
         BlockSubCommand::Number(_) => context
-            .execute(block::get_block_number(context))
+            .execute(block::get_block_number(node_provider))
             .map(BlockNamespaceResult::Number)?,
         BlockSubCommand::TransactionCount(_) => context
             .execute(block::get_transaction_count(
-                context,
+                node_provider,
                 get_block_by_id.try_into()?,
             ))?
             .map_or(
@@ -86,13 +88,13 @@ pub fn parse(
             ),
         BlockSubCommand::UncleCount(_) => context
             .execute(block::get_uncle_block_count(
-                context,
+                node_provider,
                 get_block_by_id.try_into()?,
             ))
             .map(BlockNamespaceResult::Count)?,
         BlockSubCommand::Receipts(_) => context
             .execute(block::get_block_receipts(
-                context,
+                node_provider,
                 get_block_by_id.try_into()?,
             ))?
             .map_or(
