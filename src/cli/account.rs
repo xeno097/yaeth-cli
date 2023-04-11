@@ -1,6 +1,6 @@
 use crate::{cmd, context::CommandExecutionContext};
 
-use super::common::{GetBlockArgs, NoArgs};
+use super::common::{GetBlockByIdArgs, NoArgs};
 use clap::{command, Args, Parser, Subcommand};
 use ethers::types::{Bytes, NameOrAddress, H160, H256, U256};
 use thiserror::Error;
@@ -12,7 +12,7 @@ pub struct AccountCommand {
     get_account_by_id: GetAccountArgs,
 
     #[clap(flatten)]
-    get_block_by_id: GetBlockArgs,
+    get_block_by_id: GetBlockByIdArgs,
 
     #[command(subcommand)]
     command: AccountSubCommand,

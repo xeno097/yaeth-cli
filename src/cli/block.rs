@@ -1,5 +1,5 @@
 use crate::{
-    cli::common::GetBlockArgs as GetBlockByIdArgs,
+    cli::common::GetBlockByIdArgs,
     cmd::block::{self, BlockKind},
     context::CommandExecutionContext,
 };
