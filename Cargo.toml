@@ -16,3 +16,7 @@ tokio = "1.26.0"
 async-trait = "0.1.68"
 thiserror = "1.0.40"
 rand = "0.8.5"
+
+
+[dev-dependencies]
+tokio = { version = "1.26.0", features = ["macros"] }

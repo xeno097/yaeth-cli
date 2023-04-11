@@ -21,35 +21,16 @@ pub struct CommandExecutionContext {
 #[derive(Error, Debug)]
 pub enum ExecutionContextError {
     #[error("{0}")]
-    InvalidProviderUrl(String),
-
-    #[error("{0}")]
-    InvalidPrivateKey(String),
-
-    #[error("{0}")]
-    ProviderWithSignerError(String),
+    ProviderConfigError(NodeProviderConfigError),
 }
 
 impl CommandExecutionContext {
     pub fn new(config: CliConfig) -> Result<Self, ExecutionContextError> {
         let runtime = runtime::Runtime::new().unwrap();
 
-        let provider = Provider::try_from(config.rpc_url())
-            .map_err(|err| ExecutionContextError::InvalidProviderUrl(err.to_string()))?;
-
-        let node_provider = if let Some(priv_key) = config.priv_key() {
-            let signer = priv_key
-                .parse::<LocalWallet>()
-                .map_err(|err| ExecutionContextError::InvalidPrivateKey(err.to_string()))?;
-
-            let signer_middleware = runtime
-                .block_on(SignerMiddleware::new_with_provider_chain(provider, signer))
-                .map_err(|err| ExecutionContextError::ProviderWithSignerError(err.to_string()))?;
-
-            NodeProvider::ProviderWithSigner(signer_middleware)
-        } else {
-            NodeProvider::Provider(provider)
-        };
+        let node_provider = runtime
+            .block_on(NodeProvider::new(&config))
+            .map_err(ExecutionContextError::ProviderConfigError)?;
 
         Ok(Self {
             config,
@@ -78,6 +59,41 @@ impl CommandExecutionContext {
 pub enum NodeProvider {
     Provider(Provider<Http>),
     ProviderWithSigner(SignerMiddleware<Provider<Http>, Wallet<SigningKey>>),
+}
+
+impl NodeProvider {
+    pub async fn new(config: &CliConfig) -> Result<Self, NodeProviderConfigError> {
+        let provider = Provider::try_from(config.rpc_url())
+            .map_err(|err| NodeProviderConfigError::InvalidProviderUrl(err.to_string()))?;
+
+        let provider = if let Some(priv_key) = config.priv_key() {
+            let signer = priv_key
+                .parse::<LocalWallet>()
+                .map_err(|err| NodeProviderConfigError::InvalidPrivateKey(err.to_string()))?;
+
+            let signer_middleware = SignerMiddleware::new_with_provider_chain(provider, signer)
+                .await
+                .map_err(|err| NodeProviderConfigError::ProviderWithSignerError(err.to_string()))?;
+
+            NodeProvider::ProviderWithSigner(signer_middleware)
+        } else {
+            NodeProvider::Provider(provider)
+        };
+
+        Ok(provider)
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum NodeProviderConfigError {
+    #[error("{0}")]
+    InvalidProviderUrl(String),
+
+    #[error("{0}")]
+    InvalidPrivateKey(String),
+
+    #[error("{0}")]
+    ProviderWithSignerError(String),
 }
 
 #[derive(Error, Debug)]
