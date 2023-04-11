@@ -9,7 +9,7 @@ use crate::{
     context::CommandExecutionContext,
 };
 
-use super::common::{BlockIdParserError, GetBlockArgs, NoArgs};
+use super::common::{BlockIdParserError, GetBlockByIdArgs, NoArgs};
 use clap::{arg, command, Args, Parser, Subcommand};
 use ethers::{
     abi::Address,
@@ -47,7 +47,7 @@ pub enum TransactionSubCommand {
 #[derive(Args, Debug)]
 pub struct GetTransactionArgs {
     #[clap(flatten)]
-    get_block_by_id: GetBlockArgs,
+    get_block_by_id: GetBlockByIdArgs,
 
     // TODO: reimplement the required constraint if any of the block ids field is set
     /// Index of the transaction in the block
@@ -249,7 +249,7 @@ pub struct SimulateTransactionArgs {
     typed_tx: TypedTransactionArgs,
 
     #[clap(flatten)]
-    get_block_by_id: GetBlockArgs,
+    get_block_by_id: GetBlockByIdArgs,
 }
 
 #[derive(Error, Debug)]

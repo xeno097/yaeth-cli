@@ -1,24 +1,18 @@
 use crate::{
-    cli::common::GetBlockById,
-    cmd::block::{self, BlockDataResult, BlockKind},
+    cli::common::GetBlockByIdArgs,
+    cmd::block::{self, BlockKind},
     context::CommandExecutionContext,
 };
 use clap::{command, Args, Parser, Subcommand};
-use ethers::types::{Block, Transaction, TransactionReceipt, H256, U256, U64};
+use ethers::types::{TransactionReceipt, U256, U64};
 
-use super::common::{BlockTag, NoArgs};
+use super::common::NoArgs;
 
 #[derive(Parser, Debug)]
 #[command()]
 pub struct BlockCommand {
-    #[arg(long, exclusive = true)]
-    hash: Option<String>,
-
-    #[arg(long, exclusive = true)]
-    number: Option<u64>,
-
-    #[arg(long, exclusive = true)]
-    tag: Option<BlockTag>,
+    #[clap(flatten)]
+    get_block_by_id: GetBlockByIdArgs,
 
     #[command(subcommand)]
     command: BlockSubCommand,
@@ -45,66 +39,18 @@ pub enum BlockSubCommand {
 
 #[derive(Args, Debug)]
 pub struct GetBlockArgs {
+    /// Indicates if transactions should be included when getting block
     #[arg(long)]
     include_tx: Option<bool>,
 }
 
 #[derive(Debug)]
 pub enum BlockNamespaceResult {
-    Block(Block<H256>),
-    BlockWithTransaction(Block<Transaction>),
+    Block(BlockKind),
     Number(U64),
     Count(U256),
     TransactionReceipts(Vec<TransactionReceipt>),
     NotFound(),
-}
-
-impl From<Block<H256>> for BlockNamespaceResult {
-    fn from(value: Block<H256>) -> Self {
-        Self::Block(value)
-    }
-}
-
-impl From<Block<Transaction>> for BlockNamespaceResult {
-    fn from(value: Block<Transaction>) -> Self {
-        Self::BlockWithTransaction(value)
-    }
-}
-
-impl From<U256> for BlockNamespaceResult {
-    fn from(value: U256) -> Self {
-        Self::Count(value)
-    }
-}
-
-impl From<U64> for BlockNamespaceResult {
-    fn from(value: U64) -> Self {
-        Self::Number(value)
-    }
-}
-
-impl From<BlockKind> for BlockNamespaceResult {
-    fn from(value: BlockKind) -> Self {
-        match value {
-            BlockKind::RawBlock(block) => Self::Block(block),
-            BlockKind::BlockWithTransaction(block) => Self::BlockWithTransaction(block),
-        }
-    }
-}
-
-impl From<Vec<TransactionReceipt>> for BlockNamespaceResult {
-    fn from(value: Vec<TransactionReceipt>) -> Self {
-        BlockNamespaceResult::TransactionReceipts(value)
-    }
-}
-
-impl<T: Into<BlockNamespaceResult>> From<BlockDataResult<T>> for BlockNamespaceResult {
-    fn from(value: BlockDataResult<T>) -> Self {
-        match value {
-            BlockDataResult::Data(data) => data.into(),
-            BlockDataResult::NotFound() => BlockNamespaceResult::NotFound(),
-        }
-    }
 }
 
 pub fn parse(
@@ -112,38 +58,50 @@ pub fn parse(
     sub_command: BlockCommand,
 ) -> Result<(), anyhow::Error> {
     let BlockCommand {
-        hash,
-        number,
-        tag,
+        get_block_by_id,
         command,
     } = sub_command;
 
-    let get_block_by_id = GetBlockById::new(hash, number, tag)?;
+    let node_provider = context.node_provider();
 
     let res: BlockNamespaceResult = match command {
-        BlockSubCommand::Get(get_block_args) => context
+        BlockSubCommand::Get(GetBlockArgs { include_tx }) => context
             .execute(block::get_block(
-                context,
-                get_block_by_id.into(),
-                get_block_args.include_tx.unwrap_or_default(),
+                node_provider,
+                get_block_by_id.try_into()?,
+                include_tx.unwrap_or_default(),
             ))?
-            .into(),
-        BlockSubCommand::Number(_) => context.execute(block::get_block_number(context))?.into(),
+            .map_or(
+                BlockNamespaceResult::NotFound(),
+                BlockNamespaceResult::Block,
+            ),
+        BlockSubCommand::Number(_) => context
+            .execute(block::get_block_number(node_provider))
+            .map(BlockNamespaceResult::Number)?,
         BlockSubCommand::TransactionCount(_) => context
             .execute(block::get_transaction_count(
-                context,
-                get_block_by_id.into(),
+                node_provider,
+                get_block_by_id.try_into()?,
             ))?
-            .into(),
+            .map_or(
+                BlockNamespaceResult::NotFound(),
+                BlockNamespaceResult::Count,
+            ),
         BlockSubCommand::UncleCount(_) => context
             .execute(block::get_uncle_block_count(
-                context,
-                get_block_by_id.into(),
-            ))?
-            .into(),
+                node_provider,
+                get_block_by_id.try_into()?,
+            ))
+            .map(BlockNamespaceResult::Count)?,
         BlockSubCommand::Receipts(_) => context
-            .execute(block::get_block_receipts(context, get_block_by_id.into()))?
-            .into(),
+            .execute(block::get_block_receipts(
+                node_provider,
+                get_block_by_id.try_into()?,
+            ))?
+            .map_or(
+                BlockNamespaceResult::NotFound(),
+                BlockNamespaceResult::TransactionReceipts,
+            ),
     };
 
     println!("{:#?}", res);
