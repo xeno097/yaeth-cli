@@ -104,34 +104,32 @@ pub fn parse(
 
     let block_id = get_block_by_id.try_into().ok();
 
+    let node_provider = context.node_provider();
+
     let res: BlockNamespaceResult = match command {
         AccountSubCommand::Balance(_) => context
             .execute(cmd::account::get_balance(
-                context.node_provider(),
+                node_provider,
                 account_id,
                 block_id,
             ))
             .map(BlockNamespaceResult::Number)?,
         AccountSubCommand::Code(_) => context
-            .execute(cmd::account::get_code(
-                context.node_provider(),
-                account_id,
-                block_id,
-            ))
+            .execute(cmd::account::get_code(node_provider, account_id, block_id))
             .map(BlockNamespaceResult::Bytecode)?,
         AccountSubCommand::TransactionCount(_) => context
             .execute(cmd::account::get_transaction_count(
-                context.node_provider(),
+                node_provider,
                 account_id,
                 block_id,
             ))
             .map(BlockNamespaceResult::Number)?,
         AccountSubCommand::Nonce(_) => context
-            .execute(cmd::account::get_nonce(context.node_provider(), account_id))
+            .execute(cmd::account::get_nonce(node_provider, account_id))
             .map(BlockNamespaceResult::Number)?,
         AccountSubCommand::StorageAt(GetStorageAtArgs { slot }) => context
             .execute(cmd::account::get_storage_at(
-                context.node_provider(),
+                node_provider,
                 account_id,
                 slot,
                 block_id,
