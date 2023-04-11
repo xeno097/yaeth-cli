@@ -39,6 +39,7 @@ pub enum BlockSubCommand {
 
 #[derive(Args, Debug)]
 pub struct GetBlockArgs {
+    /// Indicates if transactions should be included when getting block
     #[arg(long)]
     include_tx: Option<bool>,
 }
