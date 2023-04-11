@@ -25,6 +25,18 @@ pub mod test {
         Ok((execution_context, anvil))
     }
 
+    pub async fn setup_test_with_no_context() -> anyhow::Result<(NodeProvider, AnvilInstance)> {
+        let anvil = Anvil::new().spawn();
+
+        let overrides = ConfigOverrides::new(None, Some(anvil.endpoint()), None);
+
+        let config = get_config(overrides)?;
+
+        let node_provider = NodeProvider::new(&config).await?;
+
+        Ok((node_provider, anvil))
+    }
+
     pub async fn send_tx_helper(
         node_provider: &NodeProvider,
         sender: H160,
