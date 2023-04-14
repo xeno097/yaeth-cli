@@ -56,7 +56,7 @@ pub enum BlockNamespaceResult {
 pub fn parse(
     context: &CommandExecutionContext,
     sub_command: BlockCommand,
-) -> Result<(), anyhow::Error> {
+) -> Result<BlockNamespaceResult, anyhow::Error> {
     let BlockCommand {
         get_block_by_id,
         command,
@@ -104,7 +104,5 @@ pub fn parse(
             ),
     };
 
-    println!("{:#?}", res);
-
-    Ok(())
+    Ok(res)
 }

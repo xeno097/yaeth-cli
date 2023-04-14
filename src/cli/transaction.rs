@@ -288,7 +288,7 @@ pub enum TransactionNamespaceResult {
 pub fn parse(
     context: &CommandExecutionContext,
     sub_command: TransactionCommand,
-) -> Result<(), anyhow::Error> {
+) -> Result<TransactionNamespaceResult, anyhow::Error> {
     let TransactionCommand { hash, command } = sub_command;
 
     let res: TransactionNamespaceResult = match command {
@@ -327,7 +327,5 @@ pub fn parse(
             .map(TransactionNamespaceResult::Call)?,
     };
 
-    println!("{:#?}", res);
-
-    Ok(())
+    Ok(res)
 }

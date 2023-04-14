@@ -93,7 +93,7 @@ pub enum AccountNamespaceResult {
 pub fn parse(
     context: &CommandExecutionContext,
     sub_command: AccountCommand,
-) -> Result<(), anyhow::Error> {
+) -> Result<AccountNamespaceResult, anyhow::Error> {
     let AccountCommand {
         get_account_by_id,
         get_block_by_id,
@@ -137,7 +137,5 @@ pub fn parse(
             .map(AccountNamespaceResult::Hash)?,
     };
 
-    println!("{:#?}", res);
-
-    Ok(())
+    Ok(res)
 }

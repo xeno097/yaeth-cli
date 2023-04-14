@@ -2,9 +2,9 @@ use clap::{command, Parser, Subcommand};
 
 use crate::{
     cli::{
-        account::{self, AccountCommand},
-        block::{self, BlockCommand},
-        transaction::{self, TransactionCommand},
+        account::{self, AccountCommand, AccountNamespaceResult},
+        block::{self, BlockCommand, BlockNamespaceResult},
+        transaction::{self, TransactionCommand, TransactionNamespaceResult},
     },
     config::{get_config, ConfigOverrides},
     context::CommandExecutionContext,
@@ -60,6 +60,13 @@ enum Command {
 #[command()]
 pub enum NoSubCommand {}
 
+#[derive(Debug)]
+pub enum CliResult {
+    BlockNamespace(BlockNamespaceResult),
+    AccountNamespace(AccountNamespaceResult),
+    TransactionNamespace(TransactionNamespaceResult),
+}
+
 pub fn run() -> Result<(), anyhow::Error> {
     let cli = EntryPoint::parse();
 
@@ -69,12 +76,20 @@ pub fn run() -> Result<(), anyhow::Error> {
 
     let execution_context = CommandExecutionContext::new(config)?;
 
-    match cli.command {
-        Command::Block(cmd) => block::parse(&execution_context, cmd),
-        Command::Account(cmd) => account::parse(&execution_context, cmd),
-        Command::Transaction(cmd) => transaction::parse(&execution_context, cmd),
+    let res = match cli.command {
+        Command::Block(cmd) => block::parse(&execution_context, cmd).map(CliResult::BlockNamespace),
+        Command::Account(cmd) => {
+            account::parse(&execution_context, cmd).map(CliResult::AccountNamespace)
+        }
+        Command::Transaction(cmd) => {
+            transaction::parse(&execution_context, cmd).map(CliResult::TransactionNamespace)
+        }
         Command::Event(_) => todo!(),
         Command::Gas(_) => todo!(),
         Command::Utils(_) => todo!(),
-    }
+    }?;
+
+    println!("{:#?}", res);
+
+    Ok(())
 }
