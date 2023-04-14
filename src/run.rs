@@ -1,4 +1,5 @@
 use clap::{command, Parser, Subcommand};
+use serde::Serialize;
 
 use crate::{
     cli::{
@@ -67,6 +68,33 @@ pub enum CliResult {
     TransactionNamespace(TransactionNamespaceResult),
 }
 
+impl Serialize for CliResult {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match &self {
+            CliResult::BlockNamespace(res) => res.serialize(serializer),
+            CliResult::AccountNamespace(res) => res.serialize(serializer),
+            CliResult::TransactionNamespace(res) => res.serialize(serializer),
+        }
+    }
+}
+
+pub enum OutputFormat {
+    Console,
+    Json,
+}
+
+fn format_output<T: Serialize>(input: T, format: OutputFormat) -> anyhow::Result<()> {
+    match format {
+        OutputFormat::Console => println!("{}", serde_json::to_string_pretty(&input)?),
+        OutputFormat::Json => todo!(),
+    }
+
+    Ok(())
+}
+
 pub fn run() -> Result<(), anyhow::Error> {
     let cli = EntryPoint::parse();
 
@@ -89,7 +117,5 @@ pub fn run() -> Result<(), anyhow::Error> {
         Command::Utils(_) => todo!(),
     }?;
 
-    println!("{:#?}", res);
-
-    Ok(())
+    format_output(res, OutputFormat::Console)
 }

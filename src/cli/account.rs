@@ -3,6 +3,7 @@ use crate::{cmd, context::CommandExecutionContext};
 use super::common::{GetBlockByIdArgs, NoArgs};
 use clap::{command, Args, Parser, Subcommand};
 use ethers::types::{Bytes, NameOrAddress, H160, H256, U256};
+use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Parser, Debug)]
@@ -83,7 +84,7 @@ pub enum AccountSubCommand {
     StorageAt(GetStorageAtArgs),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum AccountNamespaceResult {
     Bytecode(Bytes),
     Number(U256),
@@ -113,20 +114,20 @@ pub fn parse(
                 account_id,
                 block_id,
             ))
-            .map(AccountNamespaceResult::Number)?,
+            .map(AccountNamespaceResult::Number),
         AccountSubCommand::Code(_) => context
             .execute(cmd::account::get_code(node_provider, account_id, block_id))
-            .map(AccountNamespaceResult::Bytecode)?,
+            .map(AccountNamespaceResult::Bytecode),
         AccountSubCommand::TransactionCount(_) => context
             .execute(cmd::account::get_transaction_count(
                 node_provider,
                 account_id,
                 block_id,
             ))
-            .map(AccountNamespaceResult::Number)?,
+            .map(AccountNamespaceResult::Number),
         AccountSubCommand::Nonce(_) => context
             .execute(cmd::account::get_nonce(node_provider, account_id))
-            .map(AccountNamespaceResult::Number)?,
+            .map(AccountNamespaceResult::Number),
         AccountSubCommand::StorageAt(GetStorageAtArgs { slot }) => context
             .execute(cmd::account::get_storage_at(
                 node_provider,
@@ -134,8 +135,8 @@ pub fn parse(
                 slot,
                 block_id,
             ))
-            .map(AccountNamespaceResult::Hash)?,
-    };
+            .map(AccountNamespaceResult::Hash),
+    }?;
 
     Ok(res)
 }

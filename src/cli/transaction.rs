@@ -15,6 +15,7 @@ use ethers::{
     abi::Address,
     types::{Bytes, Transaction, TransactionReceipt, TransactionRequest, H256, U256, U64},
 };
+use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Parser, Debug)]
@@ -276,7 +277,7 @@ impl TryFrom<SimulateTransactionArgs> for SimulateTransactionOptions {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum TransactionNamespaceResult {
     Transaction(Transaction),
     SentTransaction(SendTxResult),

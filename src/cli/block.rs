@@ -5,6 +5,7 @@ use crate::{
 };
 use clap::{command, Args, Parser, Subcommand};
 use ethers::types::{TransactionReceipt, U256, U64};
+use serde::Serialize;
 
 use super::common::NoArgs;
 
@@ -44,7 +45,7 @@ pub struct GetBlockArgs {
     include_tx: Option<bool>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum BlockNamespaceResult {
     Block(BlockKind),
     Number(U64),

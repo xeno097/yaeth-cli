@@ -4,8 +4,9 @@ use ethers::{
     providers::Middleware,
     types::{Block, BlockId, BlockNumber, Transaction, TransactionReceipt, H256, U256, U64},
 };
+use serde::Serialize;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum BlockKind {
     RawBlock(Block<H256>),
     BlockWithTransaction(Block<Transaction>),
