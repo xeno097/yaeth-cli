@@ -84,7 +84,7 @@ pub enum AccountSubCommand {
 }
 
 #[derive(Debug)]
-pub enum BlockNamespaceResult {
+pub enum AccountNamespaceResult {
     Bytecode(Bytes),
     Number(U256),
     Hash(H256),
@@ -106,27 +106,27 @@ pub fn parse(
 
     let node_provider = context.node_provider();
 
-    let res: BlockNamespaceResult = match command {
+    let res: AccountNamespaceResult = match command {
         AccountSubCommand::Balance(_) => context
             .execute(cmd::account::get_balance(
                 node_provider,
                 account_id,
                 block_id,
             ))
-            .map(BlockNamespaceResult::Number)?,
+            .map(AccountNamespaceResult::Number)?,
         AccountSubCommand::Code(_) => context
             .execute(cmd::account::get_code(node_provider, account_id, block_id))
-            .map(BlockNamespaceResult::Bytecode)?,
+            .map(AccountNamespaceResult::Bytecode)?,
         AccountSubCommand::TransactionCount(_) => context
             .execute(cmd::account::get_transaction_count(
                 node_provider,
                 account_id,
                 block_id,
             ))
-            .map(BlockNamespaceResult::Number)?,
+            .map(AccountNamespaceResult::Number)?,
         AccountSubCommand::Nonce(_) => context
             .execute(cmd::account::get_nonce(node_provider, account_id))
-            .map(BlockNamespaceResult::Number)?,
+            .map(AccountNamespaceResult::Number)?,
         AccountSubCommand::StorageAt(GetStorageAtArgs { slot }) => context
             .execute(cmd::account::get_storage_at(
                 node_provider,
@@ -134,7 +134,7 @@ pub fn parse(
                 slot,
                 block_id,
             ))
-            .map(BlockNamespaceResult::Hash)?,
+            .map(AccountNamespaceResult::Hash)?,
     };
 
     println!("{:#?}", res);
