@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use clap::Args;
 use ethers::types::{BlockId, BlockNumber, H256};
+use serde::Serializer;
 use thiserror::Error;
 
 #[derive(Args, Debug)]
@@ -100,4 +101,11 @@ impl TryFrom<GetBlockByIdArgs> for BlockId {
 
         Err(Self::Error::MissingBlockId)
     }
+}
+
+pub fn parse_not_found<S>(s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    s.serialize_none()
 }

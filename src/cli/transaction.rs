@@ -9,7 +9,7 @@ use crate::{
     context::CommandExecutionContext,
 };
 
-use super::common::{BlockIdParserError, GetBlockByIdArgs, NoArgs};
+use super::common::{parse_not_found, BlockIdParserError, GetBlockByIdArgs, NoArgs};
 use clap::{arg, command, Args, Parser, Subcommand};
 use ethers::{
     abi::Address,
@@ -278,11 +278,13 @@ impl TryFrom<SimulateTransactionArgs> for SimulateTransactionOptions {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum TransactionNamespaceResult {
     Transaction(Transaction),
     SentTransaction(SendTxResult),
     Receipt(TransactionReceipt),
     Call(Bytes),
+    #[serde(serialize_with = "parse_not_found", rename = "transaction")]
     NotFound(),
 }
 

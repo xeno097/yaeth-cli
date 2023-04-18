@@ -7,6 +7,7 @@ use ethers::{
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
+#[serde(untagged)]
 pub enum BlockKind {
     RawBlock(Block<H256>),
     BlockWithTransaction(Block<Transaction>),

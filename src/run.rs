@@ -1,4 +1,4 @@
-use clap::{command, Parser, Subcommand};
+use clap::{builder::PossibleValue, command, Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 
 use crate::{
@@ -21,6 +21,10 @@ struct EntryPoint {
     /// Rpc url to send requests to
     #[arg(short, long)]
     rpc_url: Option<String>,
+
+    /// Format to use to output the cli result
+    #[arg(short, long, default_value = "console")]
+    out: OutputFormat,
 
     /// Optional configuration file
     #[arg(short, long)]
@@ -61,29 +65,38 @@ enum Command {
 #[command()]
 pub enum NoSubCommand {}
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
 pub enum CliResult {
     BlockNamespace(BlockNamespaceResult),
     AccountNamespace(AccountNamespaceResult),
     TransactionNamespace(TransactionNamespaceResult),
 }
 
-impl Serialize for CliResult {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match &self {
-            CliResult::BlockNamespace(res) => res.serialize(serializer),
-            CliResult::AccountNamespace(res) => res.serialize(serializer),
-            CliResult::TransactionNamespace(res) => res.serialize(serializer),
-        }
-    }
+#[derive(Debug, Clone)]
+pub enum OutputFormat {
+    /// Output the cli result to the terminal
+    Console,
+
+    /// Output the cli result to a json file
+    Json,
 }
 
-pub enum OutputFormat {
-    Console,
-    Json,
+impl ValueEnum for OutputFormat {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[OutputFormat::Console, OutputFormat::Json]
+    }
+
+    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
+        Some(match self {
+            OutputFormat::Console => {
+                PossibleValue::new("console").help("Output the cli result to the terminal")
+            }
+            OutputFormat::Json => {
+                PossibleValue::new("json").help("Output the cli result to a json file")
+            }
+        })
+    }
 }
 
 fn format_output<T: Serialize>(input: T, format: OutputFormat) -> anyhow::Result<()> {
@@ -117,5 +130,5 @@ pub fn run() -> Result<(), anyhow::Error> {
         Command::Utils(_) => todo!(),
     }?;
 
-    format_output(res, OutputFormat::Console)
+    format_output(res, cli.out)
 }

@@ -85,6 +85,7 @@ pub enum AccountSubCommand {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum AccountNamespaceResult {
     Bytecode(Bytes),
     Number(U256),

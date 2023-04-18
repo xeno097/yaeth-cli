@@ -7,7 +7,7 @@ use clap::{command, Args, Parser, Subcommand};
 use ethers::types::{TransactionReceipt, U256, U64};
 use serde::Serialize;
 
-use super::common::NoArgs;
+use super::common::{parse_not_found, NoArgs};
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -46,11 +46,13 @@ pub struct GetBlockArgs {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum BlockNamespaceResult {
     Block(BlockKind),
     Number(U64),
     Count(U256),
     TransactionReceipts(Vec<TransactionReceipt>),
+    #[serde(serialize_with = "parse_not_found", rename = "block")]
     NotFound(),
 }
 
