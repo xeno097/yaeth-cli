@@ -28,10 +28,10 @@ pub enum BlockSubCommand {
     /// Gets the number of the most recent block
     Number(NoArgs),
 
-    /// Collection of transaction related operations for the block with the provided identifier
+    /// Gets the number of transaction in the block with the provided identifier
     TransactionCount(NoArgs),
 
-    /// Collection of uncle blocks related operations for the block with the provided identifier
+    /// Gets the number of uncle blocks in the block with the provided identifier
     UncleCount(NoArgs),
 
     /// Gets the transaction receipts for the block with the provided identifier
