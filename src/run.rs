@@ -1,3 +1,5 @@
+use std::fs::File;
+
 use clap::{builder::PossibleValue, command, Parser, Subcommand, ValueEnum};
 use serde::Serialize;
 
@@ -22,9 +24,13 @@ struct EntryPoint {
     #[arg(short, long)]
     rpc_url: Option<String>,
 
-    /// Format to use to output the cli result
+    /// Output format for the cli result
     #[arg(short, long, default_value = "console")]
     out: OutputFormat,
+
+    /// Optional name for the output file
+    #[arg(short, long, default_value = "out")]
+    file: String,
 
     /// Optional configuration file
     #[arg(short, long)]
@@ -99,10 +105,17 @@ impl ValueEnum for OutputFormat {
     }
 }
 
-fn format_output<T: Serialize>(input: T, format: OutputFormat) -> anyhow::Result<()> {
+fn format_output<T: Serialize>(
+    input: T,
+    format: OutputFormat,
+    output_file: String,
+) -> anyhow::Result<()> {
     match format {
         OutputFormat::Console => println!("{}", serde_json::to_string_pretty(&input)?),
-        OutputFormat::Json => todo!(),
+        OutputFormat::Json => {
+            serde_json::to_writer_pretty(File::create(format!("{output_file}.json"))?, &input)?;
+            println!("Ok")
+        }
     }
 
     Ok(())
@@ -130,5 +143,5 @@ pub fn run() -> Result<(), anyhow::Error> {
         Command::Utils(_) => todo!(),
     }?;
 
-    format_output(res, cli.out)
+    format_output(res, cli.out, cli.file)
 }
