@@ -1,6 +1,4 @@
-use std::str::FromStr;
-
-use clap::Args;
+use clap::{builder::PossibleValue, Args, ValueEnum};
 use ethers::types::{BlockId, BlockNumber, H256};
 use serde::Serializer;
 use thiserror::Error;
@@ -17,19 +15,31 @@ pub enum BlockTag {
     Pending,
 }
 
-// Used by clap's value_parser
-impl FromStr for BlockTag {
-    type Err = String;
+impl ValueEnum for BlockTag {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[
+            Self::Earliest,
+            Self::Finalized,
+            Self::Latest,
+            Self::Pending,
+            Self::Safe,
+        ]
+    }
 
-    fn from_str(maybe_tag: &str) -> Result<Self, Self::Err> {
-        match maybe_tag.to_lowercase().trim() {
-            "latest" => Ok(BlockTag::Latest),
-            "finalized" => Ok(BlockTag::Finalized),
-            "safe" => Ok(BlockTag::Safe),
-            "earliest" => Ok(BlockTag::Earliest),
-            "pending" => Ok(BlockTag::Pending),
-            _ => Err(format!("Received invalid block tag: {maybe_tag}")),
-        }
+    fn to_possible_value(&self) -> Option<PossibleValue> {
+        Some(match self {
+            BlockTag::Latest => {
+                PossibleValue::new("latest").help("Latest block added to the blockchain")
+            }
+            BlockTag::Finalized => PossibleValue::new("finalized")
+                .help("Block accepted as part of the canonical blockchain"),
+            BlockTag::Safe => PossibleValue::new("safe")
+                .help("Block that received 2/3 attestation from validators"),
+            BlockTag::Earliest => PossibleValue::new("earliest").help("Genesis block"),
+            BlockTag::Pending => {
+                PossibleValue::new("pending").help("Block not yet part of the blockchain")
+            }
+        })
     }
 }
 
