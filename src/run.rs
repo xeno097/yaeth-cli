@@ -16,7 +16,10 @@ use crate::{
 #[derive(Parser, Debug)]
 #[command(
     author = "xeno097",
-    about = "An ether-rs wrapper to query the ethereum blockchain from a terminal"
+    about = "An ether-rs wrapper to query the ethereum blockchain from a terminal",
+    display_name = "yaeth",
+    disable_help_subcommand = true,
+    version
 )]
 struct EntryPoint {
     /// Private key to use for signing transactions

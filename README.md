@@ -1,13 +1,15 @@
 # yaeth-cli (yet another ethereum cli)
 
-yaeth-cli is a command-line interface (CLI) tool written in Rust that serves as a wrapper around ethers-rs, leveraging the clap crate for command-line argument parsing, enabling users to query the Ethereum blockchain from a terminal.
+yaeth-cli is a command-line interface (CLI) tool written in Rust that serves as a wrapper around ethers-rs, and uses the clap crate for command-line argument parsing, enabling users to query the Ethereum blockchain from a terminal.
+
+This is a toy project intended to further improve my Rust knowledge and explore the [Ethereum JSON-RPC  spec](https://ethereum.github.io/execution-apis/api-documentation/).
 
 ## Overview
 
 ```sh
 An ether-rs wrapper to query the ethereum blockchain from a terminal
 
-Usage: yaeth-cli [OPTIONS] <COMMAND>
+Usage: yaeth [OPTIONS] <COMMAND>
 
 Commands:
   block
@@ -49,6 +51,8 @@ Options:
 
   -h, --help
           Print help (see a summary with '-h')
+
+  -V, --version
 ```
 
 ## Installation
@@ -56,7 +60,7 @@ Options:
 To try yaeth-cli, follow these steps:
 
 1. Clone the repository to your local machine.
-2. Install Rust and Cargo, the Rust package manager, if you haven't already.
+2. Install Rust and Cargo, if you haven't already, following the [guide](https://doc.rust-lang.org/book/ch01-01-installation.html).
 3. Navigate to the cloned yaeth-cli directory in your terminal.
 4. Run the following command to build and install yaeth-cli:
 
@@ -69,13 +73,19 @@ cargo install --path .
 Get transaction data:
 
 ```sh
-yaeth-cli --config-file=mainnet-config.json transaction --hash=0x79202697c177e951ea2bdfc283ef9a44108c41e2023cf56c4fd233a589da2e6a get
+yaeth --config-file=mainnet-config.json transaction --hash=0x79202697c177e951ea2bdfc283ef9a44108c41e2023cf56c4fd233a589da2e6a get
 ```
 
 Query account balance:
 
 ```sh
-yaeth-cli --config-file=mainnet-config.json account --ens=vitalik.eth balance
+yaeth --config-file=mainnet-config.json account --ens=vitalik.eth balance
+```
+
+Get block data:
+
+```sh
+yaeth --config-file=mainnet-config.json block --number=17081411 get
 ```
 
 ## Work in progress
@@ -139,4 +149,4 @@ yaeth-cli is released under the MIT License. See [LICENSE](LICENSE) for details.
 
 ## Acknowledgements
 
-yaeth-cli is built on top of the ethers-rs library, which is a powerful Rust library for interacting with the Ethereum blockchain. It also uses the clap crate, a powerful and flexible command-line argument parsing library for Rust, to provide a user-friendly command-line interface. Special thanks to the developers of ethers-rs and clap for their excellent work and contributions to the Rust and Ethereum communities.
+Special thanks to the developers of [ethers-rs](https://github.com/gakonst/ethers-rs) and [clap](https://github.com/clap-rs/clap) for their work.
