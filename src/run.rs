@@ -1,10 +1,13 @@
-use clap::{command, Parser, Subcommand};
+use std::fs::File;
+
+use clap::{builder::PossibleValue, command, Parser, Subcommand, ValueEnum};
+use serde::Serialize;
 
 use crate::{
     cli::{
-        account::{self, AccountCommand},
-        block::{self, BlockCommand},
-        transaction::{self, TransactionCommand},
+        account::{self, AccountCommand, AccountNamespaceResult},
+        block::{self, BlockCommand, BlockNamespaceResult},
+        transaction::{self, TransactionCommand, TransactionNamespaceResult},
     },
     config::{get_config, ConfigOverrides},
     context::CommandExecutionContext,
@@ -20,6 +23,14 @@ struct EntryPoint {
     /// Rpc url to send requests to
     #[arg(short, long)]
     rpc_url: Option<String>,
+
+    /// Output format for the cli result
+    #[arg(short, long, default_value = "console")]
+    out: OutputFormat,
+
+    /// Optional name for the output file
+    #[arg(short, long, default_value = "out")]
+    file: String,
 
     /// Optional configuration file
     #[arg(short, long)]
@@ -60,6 +71,56 @@ enum Command {
 #[command()]
 pub enum NoSubCommand {}
 
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum CliResult {
+    BlockNamespace(BlockNamespaceResult),
+    AccountNamespace(AccountNamespaceResult),
+    TransactionNamespace(TransactionNamespaceResult),
+}
+
+#[derive(Debug, Clone)]
+pub enum OutputFormat {
+    /// Output the cli result to the terminal
+    Console,
+
+    /// Output the cli result to a json file
+    Json,
+}
+
+impl ValueEnum for OutputFormat {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[OutputFormat::Console, OutputFormat::Json]
+    }
+
+    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
+        Some(match self {
+            OutputFormat::Console => {
+                PossibleValue::new("console").help("Output the cli result to the terminal")
+            }
+            OutputFormat::Json => {
+                PossibleValue::new("json").help("Output the cli result to a json file")
+            }
+        })
+    }
+}
+
+fn format_output<T: Serialize>(
+    input: T,
+    format: OutputFormat,
+    output_file: String,
+) -> anyhow::Result<()> {
+    match format {
+        OutputFormat::Console => println!("{}", serde_json::to_string_pretty(&input)?),
+        OutputFormat::Json => {
+            serde_json::to_writer_pretty(File::create(format!("{output_file}.json"))?, &input)?;
+            println!("Ok")
+        }
+    }
+
+    Ok(())
+}
+
 pub fn run() -> Result<(), anyhow::Error> {
     let cli = EntryPoint::parse();
 
@@ -69,12 +130,18 @@ pub fn run() -> Result<(), anyhow::Error> {
 
     let execution_context = CommandExecutionContext::new(config)?;
 
-    match cli.command {
-        Command::Block(cmd) => block::parse(&execution_context, cmd),
-        Command::Account(cmd) => account::parse(&execution_context, cmd),
-        Command::Transaction(cmd) => transaction::parse(&execution_context, cmd),
+    let res = match cli.command {
+        Command::Block(cmd) => block::parse(&execution_context, cmd).map(CliResult::BlockNamespace),
+        Command::Account(cmd) => {
+            account::parse(&execution_context, cmd).map(CliResult::AccountNamespace)
+        }
+        Command::Transaction(cmd) => {
+            transaction::parse(&execution_context, cmd).map(CliResult::TransactionNamespace)
+        }
         Command::Event(_) => todo!(),
         Command::Gas(_) => todo!(),
         Command::Utils(_) => todo!(),
-    }
+    }?;
+
+    format_output(res, cli.out, cli.file)
 }

@@ -5,8 +5,9 @@ use crate::{
 };
 use clap::{command, Args, Parser, Subcommand};
 use ethers::types::{TransactionReceipt, U256, U64};
+use serde::Serialize;
 
-use super::common::NoArgs;
+use super::common::{parse_not_found, NoArgs};
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -44,19 +45,21 @@ pub struct GetBlockArgs {
     include_tx: Option<bool>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum BlockNamespaceResult {
     Block(BlockKind),
     Number(U64),
     Count(U256),
     TransactionReceipts(Vec<TransactionReceipt>),
+    #[serde(serialize_with = "parse_not_found", rename = "block")]
     NotFound(),
 }
 
 pub fn parse(
     context: &CommandExecutionContext,
     sub_command: BlockCommand,
-) -> Result<(), anyhow::Error> {
+) -> Result<BlockNamespaceResult, anyhow::Error> {
     let BlockCommand {
         get_block_by_id,
         command,
@@ -104,7 +107,5 @@ pub fn parse(
             ),
     };
 
-    println!("{:#?}", res);
-
-    Ok(())
+    Ok(res)
 }

@@ -3,6 +3,7 @@ use crate::{cmd, context::CommandExecutionContext};
 use super::common::{GetBlockByIdArgs, NoArgs};
 use clap::{command, Args, Parser, Subcommand};
 use ethers::types::{Bytes, NameOrAddress, H160, H256, U256};
+use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Parser, Debug)]
@@ -83,8 +84,9 @@ pub enum AccountSubCommand {
     StorageAt(GetStorageAtArgs),
 }
 
-#[derive(Debug)]
-pub enum BlockNamespaceResult {
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AccountNamespaceResult {
     Bytecode(Bytes),
     Number(U256),
     Hash(H256),
@@ -93,7 +95,7 @@ pub enum BlockNamespaceResult {
 pub fn parse(
     context: &CommandExecutionContext,
     sub_command: AccountCommand,
-) -> Result<(), anyhow::Error> {
+) -> Result<AccountNamespaceResult, anyhow::Error> {
     let AccountCommand {
         get_account_by_id,
         get_block_by_id,
@@ -106,27 +108,27 @@ pub fn parse(
 
     let node_provider = context.node_provider();
 
-    let res: BlockNamespaceResult = match command {
+    let res: AccountNamespaceResult = match command {
         AccountSubCommand::Balance(_) => context
             .execute(cmd::account::get_balance(
                 node_provider,
                 account_id,
                 block_id,
             ))
-            .map(BlockNamespaceResult::Number)?,
+            .map(AccountNamespaceResult::Number),
         AccountSubCommand::Code(_) => context
             .execute(cmd::account::get_code(node_provider, account_id, block_id))
-            .map(BlockNamespaceResult::Bytecode)?,
+            .map(AccountNamespaceResult::Bytecode),
         AccountSubCommand::TransactionCount(_) => context
             .execute(cmd::account::get_transaction_count(
                 node_provider,
                 account_id,
                 block_id,
             ))
-            .map(BlockNamespaceResult::Number)?,
+            .map(AccountNamespaceResult::Number),
         AccountSubCommand::Nonce(_) => context
             .execute(cmd::account::get_nonce(node_provider, account_id))
-            .map(BlockNamespaceResult::Number)?,
+            .map(AccountNamespaceResult::Number),
         AccountSubCommand::StorageAt(GetStorageAtArgs { slot }) => context
             .execute(cmd::account::get_storage_at(
                 node_provider,
@@ -134,10 +136,8 @@ pub fn parse(
                 slot,
                 block_id,
             ))
-            .map(BlockNamespaceResult::Hash)?,
-    };
+            .map(AccountNamespaceResult::Hash),
+    }?;
 
-    println!("{:#?}", res);
-
-    Ok(())
+    Ok(res)
 }

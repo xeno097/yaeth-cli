@@ -3,6 +3,7 @@ use ethers::{
     providers::{Http, Middleware, PendingTransaction},
     types::{BlockId, Bytes, Transaction, TransactionReceipt, TransactionRequest, H256},
 };
+use serde::Serialize;
 
 use crate::context::CommandExecutionContext;
 
@@ -82,7 +83,7 @@ impl SendTransactionOptions {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum SendTxResult {
     PendingTransaction(H256),
     Receipt(Option<TransactionReceipt>),

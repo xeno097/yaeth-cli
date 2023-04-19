@@ -9,12 +9,13 @@ use crate::{
     context::CommandExecutionContext,
 };
 
-use super::common::{BlockIdParserError, GetBlockByIdArgs, NoArgs};
+use super::common::{parse_not_found, BlockIdParserError, GetBlockByIdArgs, NoArgs};
 use clap::{arg, command, Args, Parser, Subcommand};
 use ethers::{
     abi::Address,
     types::{Bytes, Transaction, TransactionReceipt, TransactionRequest, H256, U256, U64},
 };
+use serde::Serialize;
 use thiserror::Error;
 
 #[derive(Parser, Debug)]
@@ -276,19 +277,21 @@ impl TryFrom<SimulateTransactionArgs> for SimulateTransactionOptions {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub enum TransactionNamespaceResult {
     Transaction(Transaction),
     SentTransaction(SendTxResult),
     Receipt(TransactionReceipt),
     Call(Bytes),
+    #[serde(serialize_with = "parse_not_found", rename = "transaction")]
     NotFound(),
 }
 
 pub fn parse(
     context: &CommandExecutionContext,
     sub_command: TransactionCommand,
-) -> Result<(), anyhow::Error> {
+) -> Result<TransactionNamespaceResult, anyhow::Error> {
     let TransactionCommand { hash, command } = sub_command;
 
     let res: TransactionNamespaceResult = match command {
@@ -327,7 +330,5 @@ pub fn parse(
             .map(TransactionNamespaceResult::Call)?,
     };
 
-    println!("{:#?}", res);
-
-    Ok(())
+    Ok(res)
 }
