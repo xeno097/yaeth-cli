@@ -43,17 +43,21 @@ impl ValueEnum for BlockTag {
     }
 }
 
-impl From<BlockTag> for BlockId {
+impl From<BlockTag> for BlockNumber {
     fn from(value: BlockTag) -> Self {
-        let tag = match value {
+        match value {
             BlockTag::Latest => BlockNumber::Latest,
             BlockTag::Finalized => BlockNumber::Finalized,
             BlockTag::Safe => BlockNumber::Safe,
             BlockTag::Earliest => BlockNumber::Earliest,
             BlockTag::Pending => BlockNumber::Pending,
-        };
+        }
+    }
+}
 
-        BlockId::Number(tag)
+impl From<BlockTag> for BlockId {
+    fn from(value: BlockTag) -> Self {
+        BlockId::Number(value.into())
     }
 }
 
