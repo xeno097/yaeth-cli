@@ -9,12 +9,12 @@ use crate::{
     context::CommandExecutionContext,
 };
 
-use super::common::{parse_not_found, BlockIdParserError, GetBlockByIdArgs, NoArgs};
-use clap::{arg, command, Args, Parser, Subcommand};
-use ethers::{
-    abi::Address,
-    types::{Bytes, Transaction, TransactionReceipt, TransactionRequest, H256, U256, U64},
+use super::common::{
+    parse_not_found, BlockIdParserError, GetBlockByIdArgs, NoArgs, TypedTransactionArgs,
+    TypedTransactionParserError,
 };
+use clap::{arg, command, Args, Parser, Subcommand};
+use ethers::types::{Bytes, Transaction, TransactionReceipt, H256};
 use serde::Serialize;
 use thiserror::Error;
 
@@ -71,105 +71,6 @@ pub struct SendTransactionArgs {
     /// Wait for the transaction receipt
     #[arg(long)]
     wait: Option<bool>,
-}
-
-#[derive(Args, Debug)]
-struct TypedTransactionArgs {
-    #[arg(long)]
-    from: Option<Address>,
-
-    #[arg(long, conflicts_with = "ens")]
-    address: Option<Address>,
-
-    #[arg(long)]
-    ens: Option<String>,
-
-    #[arg(long)]
-    gas: Option<U256>,
-
-    #[arg(long)]
-    gas_price: Option<U256>,
-
-    /// Amount of Eth to send
-    #[arg(long)]
-    value: Option<U256>,
-
-    #[arg(long)]
-    data: Option<Bytes>,
-
-    #[arg(long)]
-    nonce: Option<U256>,
-
-    #[arg(long)]
-    chain_id: Option<U64>,
-}
-
-#[derive(Error, Debug)]
-pub enum TypedTransactionParserError {
-    #[error("Provided both ens and address")]
-    ConflictingTransactionReceiver,
-}
-
-impl TryFrom<TypedTransactionArgs> for TransactionRequest {
-    type Error = TypedTransactionParserError;
-
-    fn try_from(value: TypedTransactionArgs) -> Result<Self, Self::Error> {
-        let TypedTransactionArgs {
-            from,
-            address,
-            ens,
-            gas,
-            gas_price,
-            value,
-            data,
-            nonce,
-            chain_id,
-        } = value;
-
-        let mut tx = TransactionRequest::new();
-
-        if ens.is_some() && address.is_some() {
-            return Err(Self::Error::ConflictingTransactionReceiver);
-        }
-
-        if let Some(from) = from {
-            tx = tx.from(from)
-        }
-
-        if let Some(address) = address {
-            tx = tx.to(address)
-        }
-
-        if let Some(ens) = ens {
-            tx = tx.to(ens)
-        }
-
-        if let Some(gas) = gas {
-            tx = tx.gas(gas)
-        }
-
-        if let Some(gas_price) = gas_price {
-            tx = tx.gas_price(gas_price)
-        }
-
-        if let Some(value) = value {
-            tx = tx.value(value)
-        }
-
-        if let Some(data) = data {
-            tx = tx.data(data)
-        }
-
-        if let Some(nonce) = nonce {
-            tx = tx.nonce(nonce)
-        }
-
-        if let Some(chain_id) = chain_id {
-            tx = tx.chain_id(chain_id)
-        }
-
-        Ok(tx)
-    }
 }
 
 #[derive(Error, Debug)]
