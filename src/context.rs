@@ -6,7 +6,7 @@ use ethers::{
     },
     providers::{Http, MiddlewareError, PendingTransaction, Provider, ProviderError},
     signers::{LocalWallet, Wallet},
-    types::{transaction::eip2718::TypedTransaction, BlockId},
+    types::{transaction::eip2718::TypedTransaction, BlockId, U256},
 };
 use std::future::Future;
 use thiserror::Error;
@@ -81,6 +81,13 @@ impl NodeProvider {
         };
 
         Ok(provider)
+    }
+
+    /// Returns the current max priority fee per gas in wei.
+    pub async fn get_eth_max_priority_fee_per_gas(&self) -> anyhow::Result<U256> {
+        let res = self.inner().request("eth_maxPriorityFeePerGas", ()).await?;
+
+        Ok(res)
     }
 }
 
