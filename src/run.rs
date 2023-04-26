@@ -7,6 +7,7 @@ use crate::{
     cli::{
         account::{self, AccountCommand, AccountNamespaceResult},
         block::{self, BlockCommand, BlockNamespaceResult},
+        gas::{self, GasCommand, GasNamespaceResult},
         transaction::{self, TransactionCommand, TransactionNamespaceResult},
     },
     config::{get_config, ConfigOverrides},
@@ -65,8 +66,7 @@ enum Command {
     Event(NoSubCommand),
 
     /// Execute gas related operations
-    #[command(subcommand)]
-    Gas(NoSubCommand),
+    Gas(GasCommand),
 
     /// Collection of utils
     #[command(subcommand)]
@@ -83,6 +83,7 @@ pub enum CliResult {
     BlockNamespace(BlockNamespaceResult),
     AccountNamespace(AccountNamespaceResult),
     TransactionNamespace(TransactionNamespaceResult),
+    GasNamespace(GasNamespaceResult),
 }
 
 #[derive(Debug, Clone)]
@@ -145,7 +146,7 @@ pub fn run() -> Result<(), anyhow::Error> {
             transaction::parse(&execution_context, cmd).map(CliResult::TransactionNamespace)
         }
         Command::Event(_) => todo!(),
-        Command::Gas(_) => todo!(),
+        Command::Gas(cmd) => gas::parse(&execution_context, cmd).map(CliResult::GasNamespace),
         Command::Utils(_) => todo!(),
     }?;
 

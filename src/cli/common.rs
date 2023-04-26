@@ -1,5 +1,5 @@
 use clap::{builder::PossibleValue, Args, ValueEnum};
-use ethers::types::{BlockId, BlockNumber, H256};
+use ethers::types::{Address, BlockId, BlockNumber, Bytes, TransactionRequest, H256, U256, U64};
 use serde::Serializer;
 use thiserror::Error;
 
@@ -43,17 +43,21 @@ impl ValueEnum for BlockTag {
     }
 }
 
-impl From<BlockTag> for BlockId {
+impl From<BlockTag> for BlockNumber {
     fn from(value: BlockTag) -> Self {
-        let tag = match value {
+        match value {
             BlockTag::Latest => BlockNumber::Latest,
             BlockTag::Finalized => BlockNumber::Finalized,
             BlockTag::Safe => BlockNumber::Safe,
             BlockTag::Earliest => BlockNumber::Earliest,
             BlockTag::Pending => BlockNumber::Pending,
-        };
+        }
+    }
+}
 
-        BlockId::Number(tag)
+impl From<BlockTag> for BlockId {
+    fn from(value: BlockTag) -> Self {
+        BlockId::Number(value.into())
     }
 }
 
@@ -118,4 +122,103 @@ where
     S: Serializer,
 {
     s.serialize_none()
+}
+
+#[derive(Args, Debug)]
+pub struct TypedTransactionArgs {
+    #[arg(long)]
+    from: Option<Address>,
+
+    #[arg(long, conflicts_with = "ens")]
+    address: Option<Address>,
+
+    #[arg(long)]
+    ens: Option<String>,
+
+    #[arg(long)]
+    gas: Option<U256>,
+
+    #[arg(long)]
+    gas_price: Option<U256>,
+
+    /// Amount of Eth to send
+    #[arg(long)]
+    value: Option<U256>,
+
+    #[arg(long)]
+    data: Option<Bytes>,
+
+    #[arg(long)]
+    nonce: Option<U256>,
+
+    #[arg(long)]
+    chain_id: Option<U64>,
+}
+
+#[derive(Error, Debug)]
+pub enum TypedTransactionParserError {
+    #[error("Provided both ens and address")]
+    ConflictingTransactionReceiver,
+}
+
+impl TryFrom<TypedTransactionArgs> for TransactionRequest {
+    type Error = TypedTransactionParserError;
+
+    fn try_from(value: TypedTransactionArgs) -> Result<Self, Self::Error> {
+        let TypedTransactionArgs {
+            from,
+            address,
+            ens,
+            gas,
+            gas_price,
+            value,
+            data,
+            nonce,
+            chain_id,
+        } = value;
+
+        let mut tx = TransactionRequest::new();
+
+        if ens.is_some() && address.is_some() {
+            return Err(Self::Error::ConflictingTransactionReceiver);
+        }
+
+        if let Some(from) = from {
+            tx = tx.from(from)
+        }
+
+        if let Some(address) = address {
+            tx = tx.to(address)
+        }
+
+        if let Some(ens) = ens {
+            tx = tx.to(ens)
+        }
+
+        if let Some(gas) = gas {
+            tx = tx.gas(gas)
+        }
+
+        if let Some(gas_price) = gas_price {
+            tx = tx.gas_price(gas_price)
+        }
+
+        if let Some(value) = value {
+            tx = tx.value(value)
+        }
+
+        if let Some(data) = data {
+            tx = tx.data(data)
+        }
+
+        if let Some(nonce) = nonce {
+            tx = tx.nonce(nonce)
+        }
+
+        if let Some(chain_id) = chain_id {
+            tx = tx.chain_id(chain_id)
+        }
+
+        Ok(tx)
+    }
 }

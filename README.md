@@ -115,11 +115,11 @@ yaeth --config-file=mainnet-config.json block --number=17081411 get
   - [x] eth_getStorageAt
   - [x] eth_getTransactionCount
 
-- [ ] Gas
-  - [ ] eth_estimateGas
-  - [ ] eth_feeHistory
-  - [ ] eth_gasPrice
-  - [ ] eth_maxPriorityFeePerGas
+- [x] Gas
+  - [x] eth_estimateGas
+  - [x] eth_feeHistory
+  - [x] eth_gasPrice
+  - [x] eth_maxPriorityFeePerGas
 
 - [ ] Utils
   - [ ] eth_accounts
