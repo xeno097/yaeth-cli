@@ -98,13 +98,13 @@ mod tests {
 
         use crate::cmd::{
             block::{get_block, BlockKind},
-            helpers::test::setup_test_with_no_context,
+            helpers::test::setup_test,
         };
 
         #[tokio::test]
         async fn should_not_find_a_non_existing_block() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res = get_block(
@@ -126,7 +126,7 @@ mod tests {
         #[tokio::test]
         async fn should_get_the_block() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res = get_block(&node_provider, BlockId::Number(BlockNumber::Latest), false).await;
@@ -143,7 +143,7 @@ mod tests {
         #[tokio::test]
         async fn should_get_the_block_without_transactions() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res = get_block(&node_provider, BlockId::Number(BlockNumber::Latest), false).await;
@@ -162,7 +162,7 @@ mod tests {
         #[tokio::test]
         async fn should_get_the_block_with_transactions() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res = get_block(&node_provider, BlockId::Number(BlockNumber::Latest), true).await;
@@ -185,12 +185,12 @@ mod tests {
     mod get_block_number {
         use ethers::types::U64;
 
-        use crate::cmd::{block::get_block_number, helpers::test::setup_test_with_no_context};
+        use crate::cmd::{block::get_block_number, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_the_block_number() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res = get_block_number(&node_provider).await;
@@ -208,12 +208,12 @@ mod tests {
     mod get_transaction_count {
         use ethers::types::{BlockId, BlockNumber, U256};
 
-        use crate::cmd::{block::get_transaction_count, helpers::test::setup_test_with_no_context};
+        use crate::cmd::{block::get_transaction_count, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_the_block_tx_count_for_an_existing_block() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res =
@@ -235,7 +235,7 @@ mod tests {
         async fn should_not_find_the_block_tx_count_for_a_non_existing_block() -> anyhow::Result<()>
         {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res = get_transaction_count(
@@ -257,12 +257,12 @@ mod tests {
     mod get_uncle_block_count {
         use ethers::types::{BlockId, BlockNumber, U256};
 
-        use crate::cmd::{block::get_uncle_block_count, helpers::test::setup_test_with_no_context};
+        use crate::cmd::{block::get_uncle_block_count, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_uncle_block_count() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res =

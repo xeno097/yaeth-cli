@@ -195,10 +195,12 @@ pub fn parse(
 ) -> Result<TransactionNamespaceResult, anyhow::Error> {
     let TransactionCommand { hash, command } = sub_command;
 
+    let node_provider = context.node_provider();
+
     let res: TransactionNamespaceResult = match command {
         TransactionSubCommand::Get(get_transaction_args) => context
             .execute(cmd::transaction::get_transaction(
-                context,
+                node_provider,
                 hash.map(GetTransaction::TransactionHash)
                     .map_or_else(|| get_transaction_args.try_into(), Ok)?,
             ))?
@@ -208,7 +210,7 @@ pub fn parse(
             ),
         TransactionSubCommand::Receipt(_) => context
             .execute(cmd::transaction::get_transaction_receipt(
-                context,
+                node_provider,
                 hash.ok_or(anyhow::anyhow!(
                     "Missing required argument transaction hash"
                 ))?,
@@ -219,13 +221,13 @@ pub fn parse(
             ),
         TransactionSubCommand::Send(send_transaction_args) => context
             .execute(cmd::transaction::send_transaction(
-                context,
+                node_provider,
                 send_transaction_args.try_into()?,
             ))
             .map(TransactionNamespaceResult::SentTransaction)?,
         TransactionSubCommand::Call(simulate_transaction_args) => context
             .execute(cmd::transaction::call(
-                context,
+                node_provider,
                 simulate_transaction_args.try_into()?,
             ))
             .map(TransactionNamespaceResult::Call)?,

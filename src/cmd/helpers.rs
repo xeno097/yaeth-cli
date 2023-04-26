@@ -47,22 +47,10 @@ pub mod test {
 
     use crate::{
         config::{get_config, ConfigOverrides},
-        context::{CommandExecutionContext, NodeProvider},
+        context::NodeProvider,
     };
 
-    pub fn setup_test() -> anyhow::Result<(CommandExecutionContext, AnvilInstance)> {
-        let anvil = Anvil::new().spawn();
-
-        let overrides = ConfigOverrides::new(None, Some(anvil.endpoint()), None);
-
-        let config = get_config(overrides)?;
-
-        let execution_context = CommandExecutionContext::new(config)?;
-
-        Ok((execution_context, anvil))
-    }
-
-    pub async fn setup_test_with_no_context() -> anyhow::Result<(NodeProvider, AnvilInstance)> {
+    pub async fn setup_test() -> anyhow::Result<(NodeProvider, AnvilInstance)> {
         let anvil = Anvil::new().spawn();
 
         let overrides = ConfigOverrides::new(None, Some(anvil.endpoint()), None);

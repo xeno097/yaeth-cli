@@ -5,7 +5,7 @@ use ethers::{
 };
 use serde::Serialize;
 
-use crate::context::CommandExecutionContext;
+use crate::context::NodeProvider;
 
 pub enum GetTransaction {
     TransactionHash(H256),
@@ -13,34 +13,34 @@ pub enum GetTransaction {
 }
 
 pub async fn get_transaction(
-    context: &CommandExecutionContext,
+    node_provider: &NodeProvider,
     get_by: GetTransaction,
 ) -> anyhow::Result<Option<Transaction>> {
     match get_by {
-        GetTransaction::TransactionHash(hash) => get_transaction_by_hash(context, hash).await,
+        GetTransaction::TransactionHash(hash) => get_transaction_by_hash(node_provider, hash).await,
         GetTransaction::BlockIdAndIdx(block_id, idx) => {
-            get_transaction_block_id_and_idx(context, block_id, idx).await
+            get_transaction_block_id_and_idx(node_provider, block_id, idx).await
         }
     }
 }
 
 // eth_getTransactionByHash
 async fn get_transaction_by_hash(
-    context: &CommandExecutionContext,
+    node_provider: &NodeProvider,
     hash: H256,
 ) -> anyhow::Result<Option<Transaction>> {
-    let tx = context.node_provider().get_transaction(hash).await?;
+    let tx = node_provider.get_transaction(hash).await?;
 
     Ok(tx)
 }
 
 // eth_getTransactionByBlockHashAndIndex || eth_getTransactionByBlockNumberAndIndex
 async fn get_transaction_block_id_and_idx(
-    context: &CommandExecutionContext,
+    node_provider: &NodeProvider,
     block_id: BlockId,
     idx: usize,
 ) -> anyhow::Result<Option<Transaction>> {
-    let block = context.node_provider().get_block_with_txs(block_id).await?;
+    let block = node_provider.get_block_with_txs(block_id).await?;
 
     if let Some(block) = block {
         let tx = block.transactions.get(idx).cloned();
@@ -53,13 +53,10 @@ async fn get_transaction_block_id_and_idx(
 
 // eth_getTransactionReceipt
 pub async fn get_transaction_receipt(
-    context: &CommandExecutionContext,
+    node_provider: &NodeProvider,
     hash: H256,
 ) -> anyhow::Result<Option<TransactionReceipt>> {
-    let receipt = context
-        .node_provider()
-        .get_transaction_receipt(hash)
-        .await?;
+    let receipt = node_provider.get_transaction_receipt(hash).await?;
 
     Ok(receipt)
 }
@@ -90,14 +87,16 @@ pub enum SendTxResult {
 }
 
 pub async fn send_transaction(
-    context: &CommandExecutionContext,
+    node_provider: &NodeProvider,
     tx_data: SendTransactionOptions,
 ) -> anyhow::Result<SendTxResult> {
     let SendTransactionOptions { tx_data, wait } = tx_data;
 
     let pending_tx = match tx_data {
-        TransactionKind::RawTransaction(raw_tx) => send_raw_transaction(context, raw_tx).await?,
-        TransactionKind::TypedTransaction(tx) => send_typed_transaction(context, tx).await?,
+        TransactionKind::RawTransaction(raw_tx) => {
+            send_raw_transaction(node_provider, raw_tx).await?
+        }
+        TransactionKind::TypedTransaction(tx) => send_typed_transaction(node_provider, tx).await?,
     };
 
     let res = if wait {
@@ -111,22 +110,19 @@ pub async fn send_transaction(
 
 // eth_sendRawTransaction
 async fn send_raw_transaction(
-    context: &CommandExecutionContext,
+    node_provider: &NodeProvider,
     encoded_tx: Bytes,
 ) -> anyhow::Result<PendingTransaction<Http>> {
-    let receipt = context
-        .node_provider()
-        .send_raw_transaction(encoded_tx)
-        .await?;
+    let receipt = node_provider.send_raw_transaction(encoded_tx).await?;
 
     Ok(receipt)
 }
 
 async fn send_typed_transaction(
-    context: &CommandExecutionContext,
+    node_provider: &NodeProvider,
     tx: TransactionRequest,
 ) -> anyhow::Result<PendingTransaction<Http>> {
-    let receipt = context.node_provider().send_transaction(tx, None).await?;
+    let receipt = node_provider.send_transaction(tx, None).await?;
 
     Ok(receipt)
 }
@@ -140,13 +136,10 @@ impl SimulateTransactionOptions {
 }
 
 pub async fn call(
-    context: &CommandExecutionContext,
+    node_provider: &NodeProvider,
     options: SimulateTransactionOptions,
 ) -> anyhow::Result<Bytes> {
-    let res = context
-        .node_provider()
-        .call(&options.0.into(), options.1)
-        .await?;
+    let res = node_provider.call(&options.0.into(), options.1).await?;
 
     Ok(res)
 }
@@ -165,18 +158,16 @@ mod tests {
             transaction::{get_transaction, GetTransaction},
         };
 
-        #[test]
-        fn should_not_find_a_transaction() -> anyhow::Result<()> {
+        #[tokio::test]
+        async fn should_not_find_a_transaction() -> anyhow::Result<()> {
             // Arrange
-            let (execution_context, _anvil) = setup_test()?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             let tx_hash = generate_random_h256();
 
             // Act
-            let res = execution_context.execute(get_transaction(
-                &execution_context,
-                GetTransaction::TransactionHash(tx_hash),
-            ));
+            let res =
+                get_transaction(&node_provider, GetTransaction::TransactionHash(tx_hash)).await;
 
             // Assert
             assert!(res.is_ok());
@@ -185,22 +176,17 @@ mod tests {
             Ok(())
         }
 
-        #[test]
-        fn should_find_a_transaction_by_hash_or_block_id_and_index() -> anyhow::Result<()> {
+        #[tokio::test]
+        async fn should_find_a_transaction_by_hash_or_block_id_and_index() -> anyhow::Result<()> {
             // Arrange
-            let (execution_context, anvil) = setup_test()?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let sender = *anvil.addresses().get(0).unwrap();
             let receiver = *anvil.addresses().get(1).unwrap();
 
             let value = parse_ether(1)?;
 
-            let tx_receipt = execution_context.execute(send_tx_helper(
-                execution_context.node_provider(),
-                sender,
-                receiver,
-                value,
-            ))?;
+            let tx_receipt = send_tx_helper(&node_provider, sender, receiver, value).await?;
 
             let tx_hash = tx_receipt.transaction_hash;
             let block_hash = tx_receipt.block_hash.unwrap();
@@ -219,7 +205,7 @@ mod tests {
 
             for test_case in test_cases {
                 // Act
-                let res = execution_context.execute(get_transaction(&execution_context, test_case));
+                let res = get_transaction(&node_provider, test_case).await;
 
                 // Assert
                 assert!(res.is_ok());
@@ -246,16 +232,15 @@ mod tests {
             transaction::get_transaction_receipt,
         };
 
-        #[test]
-        fn should_not_find_a_transaction_receipt() -> anyhow::Result<()> {
+        #[tokio::test]
+        async fn should_not_find_a_transaction_receipt() -> anyhow::Result<()> {
             // Arrange
-            let (execution_context, _anvil) = setup_test()?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             let tx_hash = generate_random_h256();
 
             // Act
-            let res =
-                execution_context.execute(get_transaction_receipt(&execution_context, tx_hash));
+            let res = get_transaction_receipt(&node_provider, tx_hash).await;
 
             // Assert
             assert!(res.is_ok());
@@ -264,28 +249,22 @@ mod tests {
             Ok(())
         }
 
-        #[test]
-        fn should_find_a_transaction_receipt() -> anyhow::Result<()> {
+        #[tokio::test]
+        async fn should_find_a_transaction_receipt() -> anyhow::Result<()> {
             // Arrange
-            let (execution_context, anvil) = setup_test()?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let sender = *anvil.addresses().get(0).unwrap();
             let receiver = *anvil.addresses().get(1).unwrap();
 
             let value = parse_ether(1)?;
 
-            let tx_hash = execution_context
-                .execute(send_tx_helper(
-                    execution_context.node_provider(),
-                    sender,
-                    receiver,
-                    value,
-                ))?
+            let tx_hash = send_tx_helper(&node_provider, sender, receiver, value)
+                .await?
                 .transaction_hash;
 
             // Act
-            let res =
-                execution_context.execute(get_transaction_receipt(&execution_context, tx_hash));
+            let res = get_transaction_receipt(&node_provider, tx_hash).await;
 
             // Assert
             assert!(res.is_ok());
@@ -344,10 +323,10 @@ mod tests {
             tx.rlp_signed(&sig)
         }
 
-        #[test]
-        fn should_send_the_raw_transaction() -> anyhow::Result<()> {
+        #[tokio::test]
+        async fn should_send_the_raw_transaction() -> anyhow::Result<()> {
             // Arrange
-            let (execution_context, anvil) = setup_test()?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let receiver = *anvil.addresses().get(1).unwrap();
             let signer: LocalWallet = anvil.keys().get(0).unwrap().clone().into();
@@ -355,10 +334,11 @@ mod tests {
             let raw_tx = get_raw_transaction(&signer, receiver, anvil.chain_id(), None);
 
             // Act
-            let res = execution_context.execute(send_transaction(
-                &execution_context,
+            let res = send_transaction(
+                &node_provider,
                 SendTransactionOptions::new(TransactionKind::RawTransaction(raw_tx), None),
-            ));
+            )
+            .await;
 
             // Assert
             assert!(res.is_ok());
@@ -366,10 +346,10 @@ mod tests {
             Ok(())
         }
 
-        #[test]
-        fn should_send_the_typed_transaction() -> anyhow::Result<()> {
+        #[tokio::test]
+        async fn should_send_the_typed_transaction() -> anyhow::Result<()> {
             // Arrange
-            let (execution_context, anvil) = setup_test()?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let sender = *anvil.addresses().get(0).unwrap();
             let receiver = *anvil.addresses().get(1).unwrap();
@@ -377,10 +357,11 @@ mod tests {
             let typed_tx = TransactionRequest::new().from(sender).to(receiver);
 
             // Act
-            let res = execution_context.execute(send_transaction(
-                &execution_context,
+            let res = send_transaction(
+                &node_provider,
                 SendTransactionOptions::new(TransactionKind::TypedTransaction(typed_tx), None),
-            ));
+            )
+            .await;
 
             // Assert
             assert!(res.is_ok());
@@ -388,10 +369,10 @@ mod tests {
             Ok(())
         }
 
-        #[test]
-        fn should_return_the_transaction_hash_if_wait_is_false() -> anyhow::Result<()> {
+        #[tokio::test]
+        async fn should_return_the_transaction_hash_if_wait_is_false() -> anyhow::Result<()> {
             // Arrange
-            let (execution_context, anvil) = setup_test()?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let receiver = *anvil.addresses().get(1).unwrap();
             let signer: LocalWallet = anvil.keys().get(0).unwrap().clone().into();
@@ -399,10 +380,11 @@ mod tests {
             let raw_tx = get_raw_transaction(&signer, receiver, anvil.chain_id(), None);
 
             // Act
-            let res = execution_context.execute(send_transaction(
-                &execution_context,
+            let res = send_transaction(
+                &node_provider,
                 SendTransactionOptions::new(TransactionKind::RawTransaction(raw_tx), Some(false)),
-            ))?;
+            )
+            .await?;
 
             // Assert
             assert!(matches!(res, SendTxResult::PendingTransaction(_)));
@@ -410,10 +392,10 @@ mod tests {
             Ok(())
         }
 
-        #[test]
-        fn should_return_the_transaction_receipt_if_wait_is_true() -> anyhow::Result<()> {
+        #[tokio::test]
+        async fn should_return_the_transaction_receipt_if_wait_is_true() -> anyhow::Result<()> {
             // Arrange
-            let (execution_context, anvil) = setup_test()?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let receiver = *anvil.addresses().get(1).unwrap();
             let signer: LocalWallet = anvil.keys().get(0).unwrap().clone().into();
@@ -421,10 +403,11 @@ mod tests {
             let raw_tx = get_raw_transaction(&signer, receiver, anvil.chain_id(), None);
 
             // Act
-            let res = execution_context.execute(send_transaction(
-                &execution_context,
+            let res = send_transaction(
+                &node_provider,
                 SendTransactionOptions::new(TransactionKind::RawTransaction(raw_tx), Some(true)),
-            ))?;
+            )
+            .await?;
 
             // Assert
             assert!(matches!(res, SendTxResult::Receipt(_)));
@@ -451,7 +434,7 @@ mod tests {
 
             // Act
             let res = execution_context.execute(send_transaction(
-                &execution_context,
+                execution_context.node_provider(),
                 SendTransactionOptions::new(
                     TransactionKind::TypedTransaction(typed_tx),
                     Some(true),
@@ -476,10 +459,10 @@ mod tests {
             transaction::{call, SimulateTransactionOptions},
         };
 
-        #[test]
-        fn should_simulate_the_transaction() -> anyhow::Result<()> {
+        #[tokio::test]
+        async fn should_simulate_the_transaction() -> anyhow::Result<()> {
             // Arrange
-            let (execution_context, anvil) = setup_test()?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let sender = *anvil.addresses().get(0).unwrap();
             let receiver = *anvil.addresses().get(1).unwrap();
@@ -487,10 +470,11 @@ mod tests {
             let typed_tx = TransactionRequest::new().from(sender).to(receiver);
 
             // Act
-            let res = execution_context.execute(call(
-                &execution_context,
+            let res = call(
+                &node_provider,
                 SimulateTransactionOptions::new(typed_tx, None),
-            ));
+            )
+            .await;
 
             // Assert
             assert!(res.is_ok());

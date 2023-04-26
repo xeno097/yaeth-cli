@@ -73,12 +73,12 @@ mod tests {
     mod get_balance {
         use ethers::utils::parse_ether;
 
-        use crate::cmd::{account::get_balance, helpers::test::setup_test_with_no_context};
+        use crate::cmd::{account::get_balance, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_the_account_balance() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, anvil) = setup_test_with_no_context().await?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let account = *anvil.addresses().get(0).unwrap();
 
@@ -99,12 +99,12 @@ mod tests {
     }
 
     mod get_code {
-        use crate::cmd::{account::get_code, helpers::test::setup_test_with_no_context};
+        use crate::cmd::{account::get_code, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_the_account_code() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, anvil) = setup_test_with_no_context().await?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let account = *anvil.addresses().get(0).unwrap();
 
@@ -124,14 +124,12 @@ mod tests {
     mod get_transaction_count {
         use ethers::types::U256;
 
-        use crate::cmd::{
-            account::get_transaction_count, helpers::test::setup_test_with_no_context,
-        };
+        use crate::cmd::{account::get_transaction_count, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_the_account_transaction_count() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, anvil) = setup_test_with_no_context().await?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let account = *anvil.addresses().get(0).unwrap();
 
@@ -153,12 +151,12 @@ mod tests {
     mod get_storage_at {
         use ethers::types::H256;
 
-        use crate::cmd::{account::get_storage_at, helpers::test::setup_test_with_no_context};
+        use crate::cmd::{account::get_storage_at, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_the_storage_data_in_the_selected_slot() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, anvil) = setup_test_with_no_context().await?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let account = *anvil.addresses().get(0).unwrap();
 

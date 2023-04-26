@@ -56,12 +56,12 @@ mod tests {
     mod estimate_gas {
         use ethers::types::TransactionRequest;
 
-        use crate::cmd::{gas::estimate_gas, helpers::test::setup_test_with_no_context};
+        use crate::cmd::{gas::estimate_gas, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_the_gas_usage_estimation() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, anvil) = setup_test_with_no_context().await?;
+            let (node_provider, anvil) = setup_test().await?;
 
             let sender = *anvil.addresses().get(0).unwrap();
             let receiver = *anvil.addresses().get(1).unwrap();
@@ -86,12 +86,12 @@ mod tests {
     mod get_fee_history {
         use ethers::types::{BlockNumber, H256};
 
-        use crate::cmd::{gas::get_fee_history, helpers::test::setup_test_with_no_context};
+        use crate::cmd::{gas::get_fee_history, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_the_fee_history() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res = get_fee_history(
@@ -114,7 +114,7 @@ mod tests {
         #[tokio::test]
         async fn should_not_find_fee_history_for_non_existing_block() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res = get_fee_history(
@@ -138,12 +138,12 @@ mod tests {
     }
 
     mod gas_price {
-        use crate::cmd::{gas::gas_price, helpers::test::setup_test_with_no_context};
+        use crate::cmd::{gas::gas_price, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_the_gas_price() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res = gas_price(&node_provider).await;
@@ -159,12 +159,12 @@ mod tests {
     }
 
     mod get_max_priority_fee {
-        use crate::cmd::{gas::get_max_priority_fee, helpers::test::setup_test_with_no_context};
+        use crate::cmd::{gas::get_max_priority_fee, helpers::test::setup_test};
 
         #[tokio::test]
         async fn should_get_the_max_priority_fee() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+            let (node_provider, _anvil) = setup_test().await?;
 
             // Act
             let res = get_max_priority_fee(&node_provider).await;
