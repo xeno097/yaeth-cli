@@ -162,7 +162,7 @@ mod tests {
         use crate::cmd::{gas::get_max_priority_fee, helpers::test::setup_test_with_no_context};
 
         #[tokio::test]
-        async fn should_get_max_priority_fee() -> anyhow::Result<()> {
+        async fn should_get_the_max_priority_fee() -> anyhow::Result<()> {
             // Arrange
             let (node_provider, _anvil) = setup_test_with_no_context().await?;
 
