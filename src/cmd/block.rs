@@ -2,9 +2,11 @@ use crate::context::NodeProvider;
 use anyhow::Ok;
 use ethers::{
     providers::Middleware,
-    types::{Block, BlockId, BlockNumber, Transaction, TransactionReceipt, H256, U256, U64},
+    types::{Block, BlockId, Transaction, TransactionReceipt, H256, U256, U64},
 };
 use serde::Serialize;
+
+use super::helpers::{get_block_number_by_block_id, get_raw_block};
 
 #[derive(Debug, Serialize)]
 #[serde(untagged)]
@@ -30,19 +32,6 @@ pub async fn get_block(
     };
 
     Ok(res)
-}
-
-async fn get_raw_block(
-    node_provider: &NodeProvider,
-    block_id: BlockId,
-) -> Result<Option<Block<H256>>, anyhow::Error> {
-    let block = node_provider.get_block(block_id).await?;
-
-    if let Some(block) = block {
-        return Ok(Some(block));
-    }
-
-    Ok(None)
 }
 
 async fn get_block_with_txs(
@@ -92,19 +81,13 @@ pub async fn get_block_receipts(
     node_provider: &NodeProvider,
     block_id: BlockId,
 ) -> Result<Option<Vec<TransactionReceipt>>, anyhow::Error> {
-    let block_id: BlockNumber = match block_id {
-        BlockId::Hash(hash) => match get_raw_block(node_provider, hash.into()).await? {
-            Some(block) => BlockNumber::from(block.number.ok_or(anyhow::anyhow!(
-                "Block number not found for the block with the provided block hash"
-            ))?),
-            None => return Ok(None),
-        },
-        BlockId::Number(num) => num,
-    };
+    if let Some(block_number) = get_block_number_by_block_id(node_provider, block_id).await? {
+        let receipts = node_provider.get_block_receipts(block_number).await?;
 
-    let receipts = node_provider.get_block_receipts(block_id).await?;
+        return Ok(Some(receipts));
+    }
 
-    Ok(Some(receipts))
+    Ok(None)
 }
 
 #[cfg(test)]

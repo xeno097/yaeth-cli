@@ -1,3 +1,40 @@
+use ethers::{
+    providers::Middleware,
+    types::{Block, BlockId, BlockNumber, H256},
+};
+
+use crate::context::NodeProvider;
+
+pub async fn get_raw_block(
+    node_provider: &NodeProvider,
+    block_id: BlockId,
+) -> Result<Option<Block<H256>>, anyhow::Error> {
+    let block = node_provider.get_block(block_id).await?;
+
+    if let Some(block) = block {
+        return Ok(Some(block));
+    }
+
+    Ok(None)
+}
+
+pub async fn get_block_number_by_block_id(
+    node_provider: &NodeProvider,
+    block_id: BlockId,
+) -> anyhow::Result<Option<BlockNumber>> {
+    let block_number = match block_id {
+        BlockId::Hash(hash) => match get_raw_block(node_provider, hash.into()).await? {
+            Some(block) => BlockNumber::from(block.number.ok_or(anyhow::anyhow!(
+                "Block number not found for the block with the provided block hash"
+            ))?),
+            None => return Ok(None),
+        },
+        BlockId::Number(num) => num,
+    };
+
+    Ok(Some(block_number))
+}
+
 #[cfg(test)]
 pub mod test {
 
