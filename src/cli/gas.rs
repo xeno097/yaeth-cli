@@ -1,8 +1,8 @@
 use crate::{cmd, context::CommandExecutionContext};
 
-use super::common::{BlockIdParserError, BlockTag, GetBlockByIdArgs, NoArgs, TypedTransactionArgs};
+use super::common::{GetBlockByIdArgs, NoArgs, TypedTransactionArgs};
 use clap::{command, Args, Parser, Subcommand};
-use ethers::types::{BlockNumber, FeeHistory, U256};
+use ethers::types::{FeeHistory, U256};
 use serde::Serialize;
 
 #[derive(Parser, Debug)]
@@ -47,49 +47,11 @@ pub struct GetFeeHistoryArgs {
 
     /// The highest block of the requested range
     #[clap(flatten)]
-    last_block: LastBlockArgs,
+    last_block: GetBlockByIdArgs,
 
     /// A monotonically increasing list of percentiles values to use to sort transactions based on the gas consumed
     #[clap()]
     percentiles: Vec<f64>,
-}
-
-#[derive(Args, Debug)]
-pub struct LastBlockArgs {
-    /// Number of the target block
-    #[arg(
-        long,
-        value_name = "BLOCK_NUMBER",
-        required_unless_present("tag"),
-        conflicts_with("tag")
-    )]
-    number: Option<u64>,
-
-    /// Tag of the target block
-    #[arg(long, value_name = "BLOCK_TAG")]
-    tag: Option<BlockTag>,
-}
-
-impl TryFrom<LastBlockArgs> for BlockNumber {
-    type Error = BlockIdParserError;
-
-    fn try_from(value: LastBlockArgs) -> Result<Self, Self::Error> {
-        let LastBlockArgs { number, tag } = value;
-
-        if number.is_some() && tag.is_some() {
-            return Err(Self::Error::ConflictingBlockId);
-        }
-
-        if let Some(number) = number {
-            return Ok(number.into());
-        }
-
-        if let Some(tag) = tag {
-            return Ok(tag.into());
-        }
-
-        Err(Self::Error::MissingBlockId)
-    }
 }
 
 #[derive(Debug, Serialize)]
@@ -98,7 +60,7 @@ pub enum GasNamespaceResult {
     Estimate(U256),
     Price(U256),
     Fee(U256),
-    GetFeeHistory(FeeHistory),
+    GetFeeHistory(Option<FeeHistory>),
 }
 
 pub fn parse(

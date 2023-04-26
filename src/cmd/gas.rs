@@ -1,9 +1,11 @@
 use ethers::{
     providers::Middleware,
-    types::{BlockId, BlockNumber, FeeHistory, TransactionRequest, U256},
+    types::{BlockId, FeeHistory, TransactionRequest, U256},
 };
 
 use crate::context::NodeProvider;
+
+use super::helpers::get_block_number_by_block_id;
 
 // eth_estimateGas
 pub async fn estimate_gas(
@@ -20,14 +22,18 @@ pub async fn estimate_gas(
 pub async fn get_fee_history(
     node_provider: &NodeProvider,
     block_count: U256,
-    last_block: BlockNumber,
+    last_block_id: BlockId,
     reward_percentiles: Vec<f64>,
-) -> anyhow::Result<FeeHistory> {
-    let fee_history = node_provider
-        .fee_history(block_count, last_block, &reward_percentiles)
-        .await?;
+) -> anyhow::Result<Option<FeeHistory>> {
+    if let Some(block_number) = get_block_number_by_block_id(node_provider, last_block_id).await? {
+        let fee_history = node_provider
+            .fee_history(block_count, block_number, &reward_percentiles)
+            .await?;
 
-    Ok(fee_history)
+        return Ok(Some(fee_history));
+    }
+
+    Ok(None)
 }
 
 // eth_gasPrice
@@ -78,12 +84,12 @@ mod tests {
     }
 
     mod get_fee_history {
-        use ethers::types::BlockNumber;
+        use ethers::types::{BlockNumber, H256};
 
         use crate::cmd::{gas::get_fee_history, helpers::test::setup_test_with_no_context};
 
         #[tokio::test]
-        async fn should_get_the_gas_usage_estimation() -> anyhow::Result<()> {
+        async fn should_get_the_fee_history() -> anyhow::Result<()> {
             // Arrange
             let (node_provider, _anvil) = setup_test_with_no_context().await?;
 
@@ -91,13 +97,41 @@ mod tests {
             let res = get_fee_history(
                 &node_provider,
                 10.into(),
-                BlockNumber::Finalized,
+                BlockNumber::Finalized.into(),
                 [90.0, 97.7].into(),
             )
             .await;
 
             // Assert
             assert!(res.is_ok());
+            let res = res.unwrap();
+
+            assert!(res.is_some());
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn should_not_find_fee_history_for_non_existing_block() -> anyhow::Result<()> {
+            // Arrange
+            let (node_provider, _anvil) = setup_test_with_no_context().await?;
+
+            // Act
+            let res = get_fee_history(
+                &node_provider,
+                10.into(),
+                "0xef94b6d16908712a41ea538a21944826404d72be407bef0b050b7bab41300ec8"
+                    .parse::<H256>()?
+                    .into(),
+                [90.0, 97.7].into(),
+            )
+            .await;
+
+            // Assert
+            assert!(res.is_ok());
+            let res = res.unwrap();
+
+            assert!(res.is_none());
 
             Ok(())
         }
