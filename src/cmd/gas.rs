@@ -45,7 +45,7 @@ pub async fn gas_price(node_provider: &NodeProvider) -> anyhow::Result<U256> {
 
 // eth_maxPriorityFeePerGas
 pub async fn get_max_priority_fee(node_provider: &NodeProvider) -> anyhow::Result<U256> {
-    let current_max_priority_fee = node_provider.get_eth_max_priority_fee_per_gas().await?;
+    let current_max_priority_fee = node_provider.get_max_priority_fee_per_gas().await?;
 
     Ok(current_max_priority_fee)
 }
