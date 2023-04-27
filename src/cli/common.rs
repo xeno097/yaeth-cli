@@ -61,18 +61,20 @@ impl From<BlockTag> for BlockId {
     }
 }
 
+pub const GET_BLOCK_BY_ID_ARG_GROUP_NAME: &str = "block_by_id";
+
 #[derive(Args, Debug)]
 pub struct GetBlockByIdArgs {
     /// Hash of the target block
-    #[arg(long, value_name = "BLOCK_HASH",conflicts_with_all(["number","tag"]))]
+    #[arg(group=GET_BLOCK_BY_ID_ARG_GROUP_NAME, long, value_name = "BLOCK_HASH",conflicts_with_all(["number","tag"]))]
     hash: Option<H256>,
 
     /// Number of the target block
-    #[arg(long, value_name = "BLOCK_NUMBER", conflicts_with_all(["hash","tag"]))]
+    #[arg(group=GET_BLOCK_BY_ID_ARG_GROUP_NAME,long, value_name = "BLOCK_NUMBER", conflicts_with_all(["hash","tag"]))]
     number: Option<u64>,
 
     /// Tag of the target block
-    #[arg(long, value_name = "BLOCK_TAG", conflicts_with_all(["hash","number"]))]
+    #[arg(group=GET_BLOCK_BY_ID_ARG_GROUP_NAME,long, value_name = "BLOCK_TAG", conflicts_with_all(["hash","number"]))]
     tag: Option<BlockTag>,
 }
 

@@ -11,7 +11,7 @@ use crate::{
 
 use super::common::{
     parse_not_found, BlockIdParserError, GetBlockByIdArgs, NoArgs, TypedTransactionArgs,
-    TypedTransactionParserError,
+    TypedTransactionParserError, GET_BLOCK_BY_ID_ARG_GROUP_NAME,
 };
 use clap::{arg, command, Args, Parser, Subcommand};
 use ethers::types::{Bytes, Transaction, TransactionReceipt, H256};
@@ -50,9 +50,8 @@ pub struct GetTransactionArgs {
     #[clap(flatten)]
     get_block_by_id: GetBlockByIdArgs,
 
-    // TODO: reimplement the required constraint if any of the block ids field is set
     /// Index of the transaction in the block
-    #[arg(long, value_name = "TRANSACTION_INDEX")]
+    #[arg(long, value_name = "TRANSACTION_INDEX", requires = GET_BLOCK_BY_ID_ARG_GROUP_NAME)]
     index: Option<u64>,
 }
 
