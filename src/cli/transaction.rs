@@ -11,7 +11,7 @@ use crate::{
 
 use super::common::{
     parse_not_found, BlockIdParserError, GetBlockByIdArgs, NoArgs, TypedTransactionArgs,
-    TypedTransactionParserError,
+    TypedTransactionParserError, GET_BLOCK_BY_ID_ARG_GROUP_NAME,
 };
 use clap::{arg, command, Args, Parser, Subcommand};
 use ethers::types::{Bytes, Transaction, TransactionReceipt, H256};
@@ -50,9 +50,8 @@ pub struct GetTransactionArgs {
     #[clap(flatten)]
     get_block_by_id: GetBlockByIdArgs,
 
-    // TODO: reimplement the required constraint if any of the block ids field is set
     /// Index of the transaction in the block
-    #[arg(long, value_name = "TRANSACTION_INDEX")]
+    #[arg(long, value_name = "TRANSACTION_INDEX", requires = GET_BLOCK_BY_ID_ARG_GROUP_NAME)]
     index: Option<u64>,
 }
 
@@ -195,10 +194,12 @@ pub fn parse(
 ) -> Result<TransactionNamespaceResult, anyhow::Error> {
     let TransactionCommand { hash, command } = sub_command;
 
+    let node_provider = context.node_provider();
+
     let res: TransactionNamespaceResult = match command {
         TransactionSubCommand::Get(get_transaction_args) => context
             .execute(cmd::transaction::get_transaction(
-                context,
+                node_provider,
                 hash.map(GetTransaction::TransactionHash)
                     .map_or_else(|| get_transaction_args.try_into(), Ok)?,
             ))?
@@ -208,7 +209,7 @@ pub fn parse(
             ),
         TransactionSubCommand::Receipt(_) => context
             .execute(cmd::transaction::get_transaction_receipt(
-                context,
+                node_provider,
                 hash.ok_or(anyhow::anyhow!(
                     "Missing required argument transaction hash"
                 ))?,
@@ -219,13 +220,13 @@ pub fn parse(
             ),
         TransactionSubCommand::Send(send_transaction_args) => context
             .execute(cmd::transaction::send_transaction(
-                context,
+                node_provider,
                 send_transaction_args.try_into()?,
             ))
             .map(TransactionNamespaceResult::SentTransaction)?,
         TransactionSubCommand::Call(simulate_transaction_args) => context
             .execute(cmd::transaction::call(
-                context,
+                node_provider,
                 simulate_transaction_args.try_into()?,
             ))
             .map(TransactionNamespaceResult::Call)?,
