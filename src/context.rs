@@ -89,6 +89,13 @@ impl NodeProvider {
 
         Ok(res)
     }
+
+    /// Returns the current ethereum protocol version.
+    pub async fn get_protocol_version(&self) -> anyhow::Result<U256> {
+        let res = self.inner().request("eth_protocolVersion", ()).await?;
+
+        Ok(res)
+    }
 }
 
 #[derive(Error, Debug)]

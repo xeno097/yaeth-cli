@@ -2,7 +2,10 @@ use crate::context::NodeProvider;
 use anyhow::Result;
 use ethers::{
     providers::Middleware,
-    types::{BlockId, EIP1186ProofResponse, NameOrAddress, H160, H256, U256},
+    types::{
+        transaction::eip2718::TypedTransaction, Address, BlockId, Bytes, EIP1186ProofResponse,
+        NameOrAddress, Signature, SyncingStatus, TransactionRequest, H160, H256, U256,
+    },
 };
 
 // eth_accounts
@@ -31,6 +34,61 @@ pub async fn get_proof(
         .await?;
 
     Ok(account_proof)
+}
+
+pub async fn get_protocol_version(node_provider: &NodeProvider) -> Result<U256> {
+    let protocol_version = node_provider.get_protocol_version().await?;
+
+    Ok(protocol_version)
+}
+
+pub enum SignTransactionData {
+    Raw(Bytes),
+    Transaction(TransactionRequest),
+}
+
+pub async fn sign(
+    node_provider: &NodeProvider,
+    from: NameOrAddress,
+    data: SignTransactionData,
+) -> Result<Signature> {
+    let from = match from {
+        NameOrAddress::Name(ens) => node_provider.resolve_name(&ens).await?,
+        NameOrAddress::Address(addr) => addr,
+    };
+
+    match data {
+        SignTransactionData::Raw(data) => sign_raw_data(node_provider, from, data).await,
+        SignTransactionData::Transaction(tx) => {
+            sign_transaction(node_provider, from, tx.into()).await
+        }
+    }
+}
+
+async fn sign_raw_data(
+    node_provider: &NodeProvider,
+    from: Address,
+    data: Bytes,
+) -> Result<Signature> {
+    let signature = node_provider.sign(data, &from).await?;
+
+    Ok(signature)
+}
+
+async fn sign_transaction(
+    node_provider: &NodeProvider,
+    from: Address,
+    tx: TypedTransaction,
+) -> Result<Signature> {
+    let signature = node_provider.sign_transaction(&tx, from).await?;
+
+    Ok(signature)
+}
+
+pub async fn get_sync_status(node_provider: &NodeProvider) -> Result<SyncingStatus> {
+    let sync_status = node_provider.syncing().await?;
+
+    Ok(sync_status)
 }
 
 #[cfg(test)]
@@ -128,4 +186,8 @@ mod tests {
             Ok(())
         }
     }
+
+    mod sign {}
+
+    mod get_sync_status {}
 }
