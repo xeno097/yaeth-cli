@@ -130,14 +130,17 @@ where
 
 #[derive(Args, Debug)]
 pub struct TypedTransactionArgs {
+    /// Address from which the transaction will be sent
     #[arg(long)]
     from: Option<Address>,
 
-    #[arg(long, conflicts_with = "ens")]
-    address: Option<Address>,
+    /// Address to send the transaction to
+    #[arg(long, conflicts_with = "ens_to")]
+    to: Option<Address>,
 
+    /// Ens name to send the transaction to
     #[arg(long)]
-    ens: Option<String>,
+    ens_to: Option<String>,
 
     #[arg(long)]
     gas: Option<U256>,
@@ -149,6 +152,7 @@ pub struct TypedTransactionArgs {
     #[arg(long)]
     value: Option<U256>,
 
+    /// Calldata to send to the target account
     #[arg(long)]
     data: Option<Bytes>,
 
@@ -158,6 +162,18 @@ pub struct TypedTransactionArgs {
     #[arg(long)]
     chain_id: Option<U64>,
 }
+
+pub const TX_ARGS_FIELD_NAMES: [&str; 9] = [
+    "from",
+    "to",
+    "ens_to",
+    "gas",
+    "gas_price",
+    "value",
+    "data",
+    "nonce",
+    "chain_id",
+];
 
 #[derive(Error, Debug)]
 pub enum TypedTransactionParserError {
@@ -171,8 +187,8 @@ impl TryFrom<TypedTransactionArgs> for TransactionRequest {
     fn try_from(value: TypedTransactionArgs) -> Result<Self, Self::Error> {
         let TypedTransactionArgs {
             from,
-            address,
-            ens,
+            to: address,
+            ens_to,
             gas,
             gas_price,
             value,
@@ -183,7 +199,7 @@ impl TryFrom<TypedTransactionArgs> for TransactionRequest {
 
         let mut tx = TransactionRequest::new();
 
-        if ens.is_some() && address.is_some() {
+        if ens_to.is_some() && address.is_some() {
             return Err(Self::Error::ConflictingTransactionReceiver);
         }
 
@@ -195,7 +211,7 @@ impl TryFrom<TypedTransactionArgs> for TransactionRequest {
             tx = tx.to(address)
         }
 
-        if let Some(ens) = ens {
+        if let Some(ens) = ens_to {
             tx = tx.to(ens)
         }
 
@@ -229,9 +245,11 @@ impl TryFrom<TypedTransactionArgs> for TransactionRequest {
 
 #[derive(Args, Debug)]
 pub struct GetAccountArgs {
+    /// Ethereum address for the account
     #[arg(long, conflicts_with = "ens", required_unless_present = "ens")]
     address: Option<H160>,
 
+    /// Ens name for the account
     #[arg(long)]
     ens: Option<String>,
 }
