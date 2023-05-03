@@ -1,5 +1,7 @@
 use clap::{builder::PossibleValue, Args, ValueEnum};
-use ethers::types::{Address, BlockId, BlockNumber, Bytes, TransactionRequest, H256, U256, U64};
+use ethers::types::{
+    Address, BlockId, BlockNumber, Bytes, NameOrAddress, TransactionRequest, H160, H256, U256, U64,
+};
 use serde::Serializer;
 use thiserror::Error;
 
@@ -222,5 +224,44 @@ impl TryFrom<TypedTransactionArgs> for TransactionRequest {
         }
 
         Ok(tx)
+    }
+}
+
+#[derive(Args, Debug)]
+pub struct GetAccountArgs {
+    #[arg(long, conflicts_with = "ens", required_unless_present = "ens")]
+    address: Option<H160>,
+
+    #[arg(long)]
+    ens: Option<String>,
+}
+
+#[derive(Error, Debug)]
+pub enum GetAccountParserError {
+    #[error("Provided multiple account identifiers. Either an ens or address must be provided.")]
+    ConflictingAccountId,
+
+    #[error("Missing account identifier. An ens or address must be provided.")]
+    MissingAccountId,
+}
+
+impl TryFrom<GetAccountArgs> for NameOrAddress {
+    type Error = GetAccountParserError;
+
+    fn try_from(GetAccountArgs { address, ens }: GetAccountArgs) -> Result<Self, Self::Error> {
+        // Sanity check
+        if address.is_some() && ens.is_some() {
+            return Err(Self::Error::ConflictingAccountId);
+        }
+
+        if let Some(address) = address {
+            return Ok(NameOrAddress::Address(address));
+        };
+
+        if let Some(ens) = ens {
+            return Ok(NameOrAddress::Name(ens));
+        };
+
+        Err(Self::Error::MissingAccountId)
     }
 }
