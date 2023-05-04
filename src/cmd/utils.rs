@@ -167,9 +167,9 @@ mod tests {
         #[tokio::test]
         async fn should_get_the_account_merkle_proof() -> anyhow::Result<()> {
             // Arrange
-            let (node_provider, _anvil) = setup_test().await?;
+            let (node_provider, anvil) = setup_test().await?;
 
-            let account = *_anvil.addresses().get(0).unwrap();
+            let account = *anvil.addresses().get(0).unwrap();
             let expected_account_balance = parse_ether(10000)?;
 
             // Act
@@ -187,7 +187,124 @@ mod tests {
         }
     }
 
-    mod sign {}
+    mod sign {
+        use ethers::{
+            types::{Bytes, RecoveryMessage, TransactionRequest, H160},
+            utils::Anvil,
+        };
 
-    mod get_sync_status {}
+        use crate::{
+            cmd::{
+                helpers::test::setup_test,
+                utils::{sign, SignTransactionData},
+            },
+            config::{get_config, ConfigOverrides},
+            context::NodeProvider,
+        };
+
+        #[tokio::test]
+        async fn should_not_sign_the_data_if_with_an_unkwnon_signer() -> anyhow::Result<()> {
+            // Arrange
+            let (node_provider, _anvil) = setup_test().await?;
+
+            let bytes = SignTransactionData::Raw(Bytes::from_static(b"somerandomdata"));
+            let from = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92267".parse::<H160>()?;
+
+            // Act
+            let res = sign(&node_provider, from.into(), bytes).await;
+
+            // Assert
+            assert!(res.is_err());
+
+            let err = res.unwrap_err();
+            assert!(err.to_string().contains("No Signer available"));
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn should_sign_the_data() -> anyhow::Result<()> {
+            // Arrange
+            let (node_provider, anvil) = setup_test().await?;
+
+            let bytes = Bytes::from_static(b"somerandomdata");
+            let data = SignTransactionData::Raw(bytes.clone());
+            let from = *anvil.addresses().get(0).unwrap();
+
+            // Act
+            let res = sign(&node_provider, from.into(), data).await;
+
+            // Assert
+            assert!(res.is_ok());
+
+            let sig = res.unwrap();
+            assert!(sig
+                .verify(RecoveryMessage::Data(bytes.into_iter().collect()), from)
+                .is_ok());
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn should_not_sign_the_tx_data_if_no_private_key_is_configured() -> anyhow::Result<()>
+        {
+            // Arrange
+            let (node_provider, anvil) = setup_test().await?;
+
+            let tx = TransactionRequest::new();
+            let data = SignTransactionData::Transaction(tx);
+            let from = *anvil.addresses().get(0).unwrap();
+
+            // Act
+            let res = sign(&node_provider, from.into(), data).await;
+
+            // Assert
+            assert!(res.is_err());
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn should_sign_the_tx_data() -> anyhow::Result<()> {
+            // Arrange
+            let anvil = Anvil::new().spawn();
+            let priv_key = hex::encode(anvil.keys().get(0).unwrap().to_be_bytes());
+
+            let overrides = ConfigOverrides::new(Some(priv_key), Some(anvil.endpoint()), None);
+            let config = get_config(overrides)?;
+
+            let node_provider = NodeProvider::new(&config).await?;
+
+            let tx = TransactionRequest::new();
+            let data = SignTransactionData::Transaction(tx.clone());
+            let from = *anvil.addresses().get(0).unwrap();
+
+            // Act
+            let res = sign(&node_provider, from.into(), data).await;
+
+            // Assert
+            assert!(res.is_ok());
+
+            Ok(())
+        }
+    }
+
+    mod get_sync_status {
+
+        use crate::cmd::{helpers::test::setup_test, utils::get_sync_status};
+
+        #[tokio::test]
+        async fn should_get_the_node_sync_status() -> anyhow::Result<()> {
+            // Arrange
+            let (node_provider, _anvil) = setup_test().await?;
+
+            // Act
+            let res = get_sync_status(&node_provider).await;
+
+            // Assert
+            assert!(res.is_ok());
+
+            Ok(())
+        }
+    }
 }
