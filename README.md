@@ -121,14 +121,10 @@ yaeth --config-file=mainnet-config.json block --number=17081411 get
   - [x] eth_gasPrice
   - [x] eth_maxPriorityFeePerGas
 
-- [ ] Utils
+- [x] Utils
   - [x] eth_accounts
   - [x] eth_chainId
-  - [ ] eth_coinbase
   - [x] eth_getProof
-  - [ ] eth_getRootHash
-  - [ ] eth_hashrate
-  - [ ] eth_mining
   - [x] eth_protocolVersion
   - [x] eth_sign
   - [x] eth_syncing
