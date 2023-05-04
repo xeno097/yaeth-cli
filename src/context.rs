@@ -6,7 +6,7 @@ use ethers::{
     },
     providers::{Http, MiddlewareError, PendingTransaction, Provider, ProviderError},
     signers::{LocalWallet, Wallet},
-    types::{transaction::eip2718::TypedTransaction, BlockId, U256},
+    types::{transaction::eip2718::TypedTransaction, Address, BlockId, Signature, U256},
 };
 use std::future::Future;
 use thiserror::Error;
@@ -163,6 +163,23 @@ impl Middleware for NodeProvider {
                 .map_err(NodeProviderError::ProviderError),
             NodeProvider::ProviderWithSigner(signer_provider) => signer_provider
                 .send_transaction(tx, block)
+                .await
+                .map_err(NodeProviderError::ProviderWithSignerError),
+        }
+    }
+
+    async fn sign_transaction(
+        &self,
+        tx: &TypedTransaction,
+        from: Address,
+    ) -> Result<Signature, Self::Error> {
+        match self {
+            NodeProvider::Provider(provider) => provider
+                .sign_transaction(tx, from)
+                .await
+                .map_err(NodeProviderError::ProviderError),
+            NodeProvider::ProviderWithSigner(signer_provider) => signer_provider
+                .sign_transaction(tx, from)
                 .await
                 .map_err(NodeProviderError::ProviderWithSignerError),
         }
