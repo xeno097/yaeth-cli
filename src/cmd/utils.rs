@@ -285,6 +285,12 @@ mod tests {
             // Assert
             assert!(res.is_ok());
 
+            let tx_with_chain_id = tx.chain_id(anvil.chain_id());
+            let sig = res.unwrap();
+            assert!(sig
+                .verify(RecoveryMessage::Hash(tx_with_chain_id.sighash()), from)
+                .is_ok());
+
             Ok(())
         }
     }
