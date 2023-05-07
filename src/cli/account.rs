@@ -1,10 +1,9 @@
 use crate::{cmd, context::CommandExecutionContext};
 
-use super::common::{GetBlockByIdArgs, NoArgs};
+use super::common::{GetAccountArgs, GetBlockByIdArgs, NoArgs};
 use clap::{command, Args, Parser, Subcommand};
-use ethers::types::{Bytes, NameOrAddress, H160, H256, U256};
+use ethers::types::{Bytes, H256, U256};
 use serde::Serialize;
-use thiserror::Error;
 
 #[derive(Parser, Debug)]
 #[command()]
@@ -17,45 +16,6 @@ pub struct AccountCommand {
 
     #[command(subcommand)]
     command: AccountSubCommand,
-}
-
-#[derive(Args, Debug)]
-pub struct GetAccountArgs {
-    #[arg(long, conflicts_with = "ens", required_unless_present = "ens")]
-    address: Option<H160>,
-
-    #[arg(long)]
-    ens: Option<String>,
-}
-
-#[derive(Error, Debug)]
-pub enum GetAccountParserError {
-    #[error("Provided multiple account identifiers. Either an ens or address must be provided.")]
-    ConflictingAccountId,
-
-    #[error("Missing account identifier. An ens or address must be provided.")]
-    MissingAccountId,
-}
-
-impl TryFrom<GetAccountArgs> for NameOrAddress {
-    type Error = GetAccountParserError;
-
-    fn try_from(GetAccountArgs { address, ens }: GetAccountArgs) -> Result<Self, Self::Error> {
-        // Sanity check
-        if address.is_some() && ens.is_some() {
-            return Err(Self::Error::ConflictingAccountId);
-        }
-
-        if let Some(address) = address {
-            return Ok(NameOrAddress::Address(address));
-        };
-
-        if let Some(ens) = ens {
-            return Ok(NameOrAddress::Name(ens));
-        };
-
-        Err(Self::Error::MissingAccountId)
-    }
 }
 
 #[derive(Args, Debug)]

@@ -11,7 +11,7 @@ use crate::{
 
 use super::common::{
     parse_not_found, BlockIdParserError, GetBlockByIdArgs, NoArgs, TypedTransactionArgs,
-    TypedTransactionParserError, GET_BLOCK_BY_ID_ARG_GROUP_NAME,
+    TypedTransactionParserError, GET_BLOCK_BY_ID_ARG_GROUP_NAME, TX_ARGS_FIELD_NAMES,
 };
 use clap::{arg, command, Args, Parser, Subcommand};
 use ethers::types::{Bytes, Transaction, TransactionReceipt, H256};
@@ -59,7 +59,7 @@ pub struct GetTransactionArgs {
 pub struct SendTransactionArgs {
     // Raw tx args
     /// Rlp encoded transaction data
-    #[arg(long,conflicts_with_all(["from", "address", "ens","gas", "gas_price", "value", "data", "chain_id"]))]
+    #[arg(long,conflicts_with_all = TX_ARGS_FIELD_NAMES)]
     raw: Option<Bytes>,
 
     // Typed Tx args
