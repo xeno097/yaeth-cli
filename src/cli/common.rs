@@ -130,15 +130,15 @@ where
 
 #[derive(Args, Debug)]
 pub struct TypedTransactionArgs {
-    /// Address from which the transaction will be sent
+    /// Address of the account from which the transaction will be sent
     #[arg(long)]
     from: Option<Address>,
 
-    /// Address to send the transaction to
+    /// Address of the account to send the transaction to
     #[arg(long, conflicts_with = "ens_to")]
     to: Option<Address>,
 
-    /// Ens name to send the transaction to
+    /// Ens name of the account to send the transaction to
     #[arg(long)]
     ens_to: Option<String>,
 
@@ -187,7 +187,7 @@ impl TryFrom<TypedTransactionArgs> for TransactionRequest {
     fn try_from(value: TypedTransactionArgs) -> Result<Self, Self::Error> {
         let TypedTransactionArgs {
             from,
-            to: address,
+            to,
             ens_to,
             gas,
             gas_price,
@@ -199,7 +199,7 @@ impl TryFrom<TypedTransactionArgs> for TransactionRequest {
 
         let mut tx = TransactionRequest::new();
 
-        if ens_to.is_some() && address.is_some() {
+        if ens_to.is_some() && to.is_some() {
             return Err(Self::Error::ConflictingTransactionReceiver);
         }
 
@@ -207,8 +207,8 @@ impl TryFrom<TypedTransactionArgs> for TransactionRequest {
             tx = tx.from(from)
         }
 
-        if let Some(address) = address {
-            tx = tx.to(address)
+        if let Some(to) = to {
+            tx = tx.to(to)
         }
 
         if let Some(ens) = ens_to {
